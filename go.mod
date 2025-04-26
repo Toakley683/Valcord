@@ -1,4 +1,4 @@
-module valorant
+module valcord
 
 go 1.24.2
 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/signal"
 
-	Types "valorant/types"
+	Types "valcord/types"
 )
 
 func checkError(err error) {

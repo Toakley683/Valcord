@@ -6,7 +6,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	Types "valorant/types"
+	Types "valcord/types"
 )
 
 type DISCORD_BOT_DATA struct {
