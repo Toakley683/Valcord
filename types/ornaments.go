@@ -46,7 +46,7 @@ func SprayData(sprayuuid string) Spray {
 	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/sprays/"+sprayuuid, nil)
 	checkError(err)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -80,7 +80,7 @@ func CardData(carduuid string) PlayerCard {
 	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/playercards/"+carduuid, nil)
 	checkError(err)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -109,7 +109,7 @@ func TitleData(titleuuid string) Title {
 	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/playertitles/"+titleuuid, nil)
 	checkError(err)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -139,7 +139,7 @@ func GetOrnamentsFromPlayer(plr_data MatchPlayerIdentity) Ornaments {
 	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/playertitles/"+plr_data.PlayerTitleID, nil)
 	checkError(err)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -154,7 +154,7 @@ func GetOrnamentsFromPlayer(plr_data MatchPlayerIdentity) Ornaments {
 	req, err = http.NewRequest("GET", "https://valorant-api.com/v1/playercards/"+plr_data.PlayerCardID, nil)
 	checkError(err)
 
-	res, err = client.Do(req)
+	res, err = Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -169,7 +169,7 @@ func GetOrnamentsFromPlayer(plr_data MatchPlayerIdentity) Ornaments {
 	req, err = http.NewRequest("GET", "https://valorant-api.com/v1/levelborders/"+plr_data.PreferredLevelBorderID, nil)
 	checkError(err)
 
-	res, err = client.Do(req)
+	res, err = Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()

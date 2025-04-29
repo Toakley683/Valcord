@@ -1,7 +1,6 @@
 package types
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -16,7 +15,7 @@ type SeasonExtra struct {
 type Season struct {
 	PeakRank                   int
 	SeasonID                   string
-	ExtraData                  SeasonExtra
+	ExtraData                  *SeasonExtra
 	NumberOfWins               int
 	NumberOfWinsWithPlacements int
 	NumberOfGames              int
@@ -35,32 +34,34 @@ type MMRGamemode struct {
 	TotalGamesNeededForRating         int
 	TotalGamesNeededForLeaderboard    int
 	CurrentSeasonGamesNeededForRating int
-	Seasons                           []Season
+	Seasons                           []*Season
+	TotalGames                        float64
+	TotalWins                         float64
 }
 
 type Career struct {
 	PeakRank                      int
 	CurrentRank                   int
 	RankedRating                  int
-	Competitive                   MMRGamemode
-	Deathmatch                    MMRGamemode
-	Ggteam                        MMRGamemode
-	Hurm                          MMRGamemode
-	Seeding                       MMRGamemode
-	Spikerush                     MMRGamemode
-	Swiftplay                     MMRGamemode
-	Unrated                       MMRGamemode
+	Competitive                   *MMRGamemode
+	Deathmatch                    *MMRGamemode
+	Ggteam                        *MMRGamemode
+	Hurm                          *MMRGamemode
+	Seeding                       *MMRGamemode
+	Spikerush                     *MMRGamemode
+	Swiftplay                     *MMRGamemode
+	Unrated                       *MMRGamemode
 	DerankProtectedGamesRemaining int
 }
 
-func GetSeasonExtraData(UUID string) SeasonExtra {
+func GetSeasonExtraData(UUID string) *SeasonExtra {
 
 	//https://valorant-api.com/v1/seasons/
 
 	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/seasons/"+UUID, nil)
 	checkError(err)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -93,7 +94,7 @@ func GetSeasonExtraData(UUID string) SeasonExtra {
 		endTime = season_information["endTime"].(string)
 	}
 
-	return SeasonExtra{
+	return &SeasonExtra{
 		displayName: displayName,
 		title:       title,
 		startTime:   startTime,
@@ -102,11 +103,18 @@ func GetSeasonExtraData(UUID string) SeasonExtra {
 
 }
 
-func GetSeasons(gamemodeName string, gamemodeData map[string]interface{}) ([]Season, int) {
+func GetSeasons(gamemodeName string, gamemodeData map[string]interface{}) ([]*Season, int, float64, float64) {
+
+	var TotalGames float64 = 0
+	var TotalWonGames float64 = 0
+
+	if gamemodeData["SeasonalInfoBySeasonID"] == nil {
+		return []*Season{}, 0, 0, 0
+	}
 
 	SeasonalInfo := gamemodeData["SeasonalInfoBySeasonID"].(map[string]interface{})
 
-	Seasons := make([]Season, len(SeasonalInfo))
+	Seasons := make([]*Season, len(SeasonalInfo))
 
 	SeasonNumID := 0
 
@@ -146,7 +154,10 @@ func GetSeasons(gamemodeName string, gamemodeData map[string]interface{}) ([]Sea
 			WinsByTier = make(map[string]int, 0)
 		}
 
-		Seasons[SeasonNumID] = Season{
+		TotalGames = TotalGames + SeasonData["NumberOfGames"].(float64)
+		TotalWonGames = TotalWonGames + SeasonData["NumberOfWinsWithPlacements"].(float64)
+
+		Seasons[SeasonNumID] = &Season{
 			SeasonID:                   SeasonData["SeasonID"].(string),
 			ExtraData:                  GetSeasonExtraData(SeasonData["SeasonID"].(string)),
 			NumberOfWins:               int(SeasonData["NumberOfWins"].(float64)),
@@ -166,11 +177,11 @@ func GetSeasons(gamemodeName string, gamemodeData map[string]interface{}) ([]Sea
 
 	}
 
-	return Seasons, PeakRank
+	return Seasons, PeakRank, TotalGames, TotalWonGames
 
 }
 
-func GetPlayerMMR(regions Regional, entitlement EntitlementsTokenResponse, player PlayerInfo, PlayerUUID string, ReturnedCareers map[string]bool) Career {
+func GetPlayerMMR(regions *Regional, entitlement *EntitlementsTokenResponse, player *PlayerInfo, PlayerUUID string, ReturnedCareers map[string]bool) Career {
 
 	//"https://pd." + regions.shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
 
@@ -182,7 +193,7 @@ func GetPlayerMMR(regions Regional, entitlement EntitlementsTokenResponse, playe
 	req.Header.Add("X-Riot-ClientPlatform", player.client_platform)
 	req.Header.Add("X-Riot-ClientVersion", player.version.riotClientVersion)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -194,13 +205,13 @@ func GetPlayerMMR(regions Regional, entitlement EntitlementsTokenResponse, playe
 
 	queueSkills := match_information["QueueSkills"].(map[string]interface{})
 
-	gamemodes := make(map[string]MMRGamemode, len(queueSkills))
+	gamemodes := make(map[string]*MMRGamemode, len(queueSkills))
 
 	PeakRank := 0
 
 	for gamemodeName, gamemodeData := range queueSkills {
 
-		log.Println("Trying type: " + gamemodeName)
+		//log.Println("Trying type: " + gamemodeName)
 
 		if len(ReturnedCareers) != 0 {
 
@@ -214,7 +225,7 @@ func GetPlayerMMR(regions Regional, entitlement EntitlementsTokenResponse, playe
 
 		gamemodeData := gamemodeData.(map[string]interface{})
 
-		Season, Peak_Rank := GetSeasons(gamemodeName, gamemodeData)
+		Season, Peak_Rank, TotalGames, TotalWins := GetSeasons(gamemodeName, gamemodeData)
 
 		if Peak_Rank > PeakRank {
 
@@ -227,15 +238,26 @@ func GetPlayerMMR(regions Regional, entitlement EntitlementsTokenResponse, playe
 			TotalGamesNeededForRating:         int(gamemodeData["TotalGamesNeededForRating"].(float64)),
 			CurrentSeasonGamesNeededForRating: int(gamemodeData["CurrentSeasonGamesNeededForRating"].(float64)),
 			Seasons:                           Season,
+			TotalGames:                        TotalGames,
+			TotalWins:                         TotalWins,
 		}
 
-		log.Println("Getting Career type: " + gamemodeName)
+		//log.Println("Getting Career type: " + gamemodeName)
 
-		gamemodes[gamemodeName] = gamemode
+		gamemodes[gamemodeName] = &gamemode
 
 	}
 
-	latestComp := match_information["LatestCompetitiveUpdate"].(map[string]interface{})
+	latestComp := map[string]any{}
+
+	latestComp["TierAfterUpdate"] = float64(0)
+	latestComp["RankedRatingAfterUpdate"] = float64(0)
+
+	if match_information["LatestCompetitiveUpdate"] != nil {
+
+		latestComp = match_information["LatestCompetitiveUpdate"].(map[string]interface{})
+
+	}
 
 	career := Career{
 		PeakRank:                      PeakRank,

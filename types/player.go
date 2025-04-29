@@ -64,7 +64,7 @@ func GetPlayerInfo(entitlements EntitlementsTokenResponse) PlayerInfo {
 
 	req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -128,7 +128,7 @@ func GetPlayerInfo(entitlements EntitlementsTokenResponse) PlayerInfo {
 	req, err = http.NewRequest("GET", "https://valorant-api.com/v1/version", nil)
 	checkError(err)
 
-	res, err = client.Do(req)
+	res, err = Client.Do(req)
 	checkError(err)
 
 	var version_info map[string]interface{}

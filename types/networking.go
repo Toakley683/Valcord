@@ -12,7 +12,7 @@ import (
 
 func checkError(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
 }
@@ -45,7 +45,7 @@ func GetJSON(res *http.Response) (map[string]interface{}, error) {
 }
 
 var (
-	client http.Client
+	Client http.Client
 )
 
 func setup_networking() {
@@ -54,5 +54,5 @@ func setup_networking() {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	client = http.Client{Transport: tr}
+	Client = http.Client{Transport: tr}
 }

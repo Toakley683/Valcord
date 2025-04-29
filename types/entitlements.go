@@ -19,7 +19,7 @@ func GetEntitlementsToken(lockfile Lockfile_type) EntitlementsTokenResponse {
 
 	req.Header.Add("Authorization", "Basic "+basicAuth("riot", lockfile.password))
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()

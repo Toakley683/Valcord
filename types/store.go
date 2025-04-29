@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -297,7 +298,7 @@ func RequestStoreFront(player PlayerInfo, entitlement EntitlementsTokenResponse,
 	req.Header.Add("X-Riot-ClientPlatform", player.client_platform)
 	req.Header.Add("X-Riot-ClientVersion", player.version.version)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -344,7 +345,7 @@ func RequestFeaturedBanner(player PlayerInfo, entitlement EntitlementsTokenRespo
 			req, err := http.NewRequest("GET", "https://valorant-api.com/v1/weapons/skinlevels/"+item["ItemID"].(string), nil)
 			checkError(err)
 
-			res, err := client.Do(req)
+			res, err := Client.Do(req)
 			checkError(err)
 
 			defer res.Body.Close()
@@ -607,6 +608,13 @@ func RequestRotationShop(player PlayerInfo, entitlement EntitlementsTokenRespons
 
 	store_front := RequestStoreFront(player, entitlement, regional)
 
+	if store_front["SkinsPanelLayout"] == nil {
+
+		fmt.Println("No rotation shop (Unsure why)")
+		return SkinsPanelLayout{}
+
+	}
+
 	skin_panel_array := store_front["SkinsPanelLayout"].(map[string]interface{})
 
 	single_offers_data := skin_panel_array["SingleItemOffers"].([]interface{})
@@ -661,7 +669,7 @@ func RequestRotationShop(player PlayerInfo, entitlement EntitlementsTokenRespons
 		req, err := http.NewRequest("GET", "https://valorant-api.com/v1/weapons/skinlevels/"+offer_data["OfferID"].(string), nil)
 		checkError(err)
 
-		res, err := client.Do(req)
+		res, err := Client.Do(req)
 		checkError(err)
 
 		defer res.Body.Close()
@@ -930,7 +938,7 @@ func RequestNightMarket(player PlayerInfo, entitlement EntitlementsTokenResponse
 		req, err := http.NewRequest("GET", "https://valorant-api.com/v1/weapons/skinlevels/"+offer["OfferID"].(string), nil)
 		checkError(err)
 
-		res, err := client.Do(req)
+		res, err := Client.Do(req)
 		checkError(err)
 
 		defer res.Body.Close()

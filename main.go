@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
+	"time"
 
 	Types "valcord/types"
 )
@@ -16,7 +19,7 @@ func checkError(err error) {
 }
 
 var (
-	settings = check_settings()
+	settings map[string]string = Types.Settings
 
 	general_valorant_information ValorantInformation
 )
@@ -28,7 +31,33 @@ type ValorantInformation struct {
 	regional_data Types.Regional
 }
 
+func cleanup() {
+
+	fmt.Println("Cleaning up data for exit..")
+
+	fmt.Println("Closing discord bot..")
+	err := discord.Close()
+
+	if err != nil {
+
+		fmt.Println("Could not disable discord bot: Error(" + err.Error() + ")")
+
+	} else {
+
+		fmt.Println("Discord bot: Closed")
+
+	}
+
+}
+
 func main() {
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
+
+	defer cleanup()
+
+	// Add listener for when Valorant is (Calling 127.0.0.1:{LockfilePort} )
 
 	Types.Init_val_details()
 	lockfile := Types.GetLockfile()
@@ -44,10 +73,11 @@ func main() {
 	}
 
 	discord_setup()
-	defer discord.Close()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
+	// Listen for matches to auto-send match data
+
+	Types.ListenForMatch(general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data, Types.Client, time.Second*10, discord)
+
 	log.Println("Press Ctrl+C to exit")
 	<-stop
 

@@ -1,4 +1,4 @@
-package main
+package types
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ var (
 	settings_file      = settings_directory + "/settings.yaml"
 )
 
-func check_settings_data(settings map[string]string) map[string]string {
+func CheckSettingsData(settings map[string]string) map[string]string {
 
 	default_settings := get_default_settings()
 
@@ -80,7 +80,7 @@ func check_settings_file() map[string]string {
 		err = yaml.Unmarshal(data, &settings)
 		checkError(err)
 
-		return check_settings_data(settings)
+		return CheckSettingsData(settings)
 
 	}
 
@@ -133,3 +133,7 @@ func check_settings() map[string]string {
 	return check_directory()
 
 }
+
+var (
+	Settings map[string]string = check_settings()
+)

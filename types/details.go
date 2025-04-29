@@ -50,7 +50,7 @@ func InitAgents() {
 	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/agents", nil)
 	checkError(err)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -88,7 +88,7 @@ func InitMaps() {
 	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/maps", nil)
 	checkError(err)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()
@@ -132,7 +132,7 @@ func InitRanks() {
 	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/competitivetiers", nil)
 	checkError(err)
 
-	res, err := client.Do(req)
+	res, err := Client.Do(req)
 	checkError(err)
 
 	defer res.Body.Close()

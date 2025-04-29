@@ -109,7 +109,7 @@ func setupComponents() {
 
 		settings["current_session_channel"] = i.ChannelID
 
-		check_settings_data(settings)
+		Types.CheckSettingsData(settings)
 
 		fmt.Println("Channel (" + i.ChannelID + ") has now been designated '" + value.(string) + "'")
 
@@ -124,13 +124,6 @@ func setupComponents() {
 
 	Types.CommandHandlers["agent_select_request"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		fmt.Println("Requested Agent Select")
-
-		AgentSelect := Types.GetAgentSelectInfo(general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data)
-
-		_, err := s.ChannelMessageSendEmbed(i.ChannelID, Types.NewAgentSelectEmbed(AgentSelect))
-		checkError(err)
-
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -139,12 +132,13 @@ func setupComponents() {
 		})
 
 		s.InteractionResponseDelete(i.Interaction)
+
+		Types.Request_agentSelect(general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data, i.ChannelID, s)
+
 	}
 
 	Types.CommandHandlers["match_request"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		Types.Request_match(general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data, i.ChannelID, s)
-
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -153,6 +147,9 @@ func setupComponents() {
 		})
 
 		s.InteractionResponseDelete(i.Interaction)
+
+		Types.Request_match(general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data, i.ChannelID, s)
+
 	}
 
 	Types.CommandHandlers["request_shop"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
