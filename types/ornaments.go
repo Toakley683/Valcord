@@ -10,6 +10,13 @@ type Title struct {
 	isHiddenIfNotOwned bool
 }
 
+type Buddy struct {
+	displayName        string
+	displayIcon        string
+	charmLevel         int
+	isHiddenIfNotOwned bool
+}
+
 type PlayerCard struct {
 	displayName        string
 	isHiddenIfNotOwned bool
@@ -125,6 +132,34 @@ func TitleData(titleuuid string) Title {
 		displayName:        title_data["displayName"].(string),
 		titleText:          title_data["titleText"].(string),
 		isHiddenIfNotOwned: title_data["isHiddenIfNotOwned"].(bool),
+	}
+
+}
+
+// Get's Buddy data
+
+func BuddyData(buddyuuid string) Buddy {
+
+	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/buddies/levels/"+buddyuuid, nil)
+	checkError(err)
+
+	res, err := Client.Do(req)
+	checkError(err)
+
+	defer res.Body.Close()
+
+	var buddy_data map[string]interface{}
+
+	data, err := GetJSON(res)
+	checkError(err)
+
+	buddy_data = data["data"].(map[string]interface{})
+
+	return Buddy{
+		displayName:        buddy_data["displayName"].(string),
+		displayIcon:        "https://media.valorant-api.com/buddylevels/" + buddyuuid + "/displayicon.png",
+		charmLevel:         int(buddy_data["charmLevel"].(float64)),
+		isHiddenIfNotOwned: buddy_data["hideIfNotOwned"].(bool),
 	}
 
 }

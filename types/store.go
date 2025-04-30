@@ -683,10 +683,10 @@ func RequestRotationShop(player PlayerInfo, entitlement EntitlementsTokenRespons
 
 		var video_stream string
 
-		if skin_data["streamedVideo	"] == nil {
+		if skin_data["streamedVideo"] == nil {
 			video_stream = ""
 		} else {
-			video_stream = skin_data["streamedVideo	"].(string)
+			video_stream = skin_data["streamedVideo"].(string)
 		}
 
 		for Index, r_data := range reward_data {
@@ -814,6 +814,22 @@ func RequestAccessoryShop(player PlayerInfo, entitlement EntitlementsTokenRespon
 
 			}
 
+			if data["ItemTypeID"] == "dd3bf334-87f3-40bd-b043-682a57a8dc3a" {
+
+				// Is Buddy
+
+				buddyData := BuddyData(data["ItemID"].(string))
+
+				Accessory_Reward[Index] = Item{
+					ItemTypeID:  data["ItemTypeID"].(string),
+					ItemID:      data["ItemID"].(string),
+					Amount:      int(data["Quantity"].(float64)),
+					Name:        buddyData.displayName,
+					displayIcon: buddyData.displayIcon,
+				}
+
+			}
+
 			if data["ItemTypeID"] == "de7caa6b-adf7-4588-bbd1-143831e786c6" {
 
 				// Is Title
@@ -828,6 +844,8 @@ func RequestAccessoryShop(player PlayerInfo, entitlement EntitlementsTokenRespon
 				}
 
 			}
+
+			fmt.Println("Type: " + data["ItemTypeID"].(string) + " Name: " + data["ItemID"].(string))
 
 		}
 

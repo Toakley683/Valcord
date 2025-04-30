@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/lynn9388/supsub"
 )
 
 var (
@@ -125,6 +127,22 @@ type EmbedInput struct {
 	PlayerIdentity MatchPlayerIdentity
 	GameName       string
 	TagLine        string
+}
+
+type ProfileEmbedInput struct {
+	Subject        string
+	CharacterID    string
+	PlayerIdentity MatchPlayerIdentity
+	GameName       string
+	TagLine        string
+	matchHistory   MatchHistory
+	loadout        *Loadout
+}
+
+func StringLengther(main string, num int) string {
+
+	return main + strings.Repeat(" ", num-len(main))
+
 }
 
 // Uses the region obtained from ShooterGame.log, along with match ID of current game
@@ -671,7 +689,7 @@ func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, enti
 	for Index, Player := range agentSelect.EnemyTeam.Players {
 
 		OptionList[Index+len(agentSelect.AllyTeam.Players)] = discordgo.SelectMenuOption{
-			Label:       PlayerNameLookup[Player.Subject]["name"] + ":" + PlayerNameLookup[Player.Subject]["tagLine"],
+			Label:       PlayerNameLookup[Player.Subject]["name"] + " " + supsub.ToSup(PlayerNameLookup[Player.Subject]["tagLine"]),
 			Value:       Player.Subject,
 			Description: "Selects this player",
 		}
@@ -824,9 +842,6 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, entitlement Entitl
 		}
 	}
 
-	fmt.Println(len(AllyTeam))
-	fmt.Println(len(EnemyTeam))
-
 	message_size := 0
 
 	if len(AllyTeam) > 0 {
@@ -849,6 +864,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, entitlement Entitl
 			CharacterID:    P.CharacterID,
 			PlayerIdentity: P.PlayerIdentity,
 			GameName:       P.GameName,
+			TagLine:        P.TagLine,
 		}
 
 		embeds0[I] = matchEmbedFromPlayer(&input, 3124052, &regions, &entitlement, &player, &match.MatchmakingData)
@@ -875,6 +891,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, entitlement Entitl
 			CharacterID:    P.CharacterID,
 			PlayerIdentity: P.PlayerIdentity,
 			GameName:       P.GameName,
+			TagLine:        P.TagLine,
 		}
 
 		embeds1[I] = matchEmbedFromPlayer(&input, 11348780, &regions, &entitlement, &player, &match.MatchmakingData)
@@ -886,7 +903,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, entitlement Entitl
 	for Index, Player := range match.Players {
 
 		OptionList[Index] = discordgo.SelectMenuOption{
-			Label:       PlayerNameLookup[Player.Subject]["name"] + ":" + PlayerNameLookup[Player.Subject]["tagLine"],
+			Label:       PlayerNameLookup[Player.Subject]["name"] + " " + supsub.ToSup(PlayerNameLookup[Player.Subject]["tagLine"]),
 			Value:       Player.Subject,
 			Description: "Selects this player",
 		}
@@ -927,7 +944,6 @@ func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, entitleme
 	mmr := GetPlayerMMR(regions, entitlement, playerInfo, P.Subject, IncludedGamemodes)
 
 	agent := AgentDetails[strings.ToLower(P.CharacterID)]
-	//ornament := GetOrnamentsFromPlayer(P.PlayerIdentity)
 
 	fmt.Println(mmr.PeakRank)
 
@@ -991,7 +1007,7 @@ func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, entitleme
 
 	return &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
-			Name:    P.GameName,
+			Name:    P.GameName + " " + supsub.ToSup(P.TagLine),
 			IconURL: agent.displayIcon,
 		},
 		Color: color,
@@ -1007,20 +1023,172 @@ func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, entitleme
 	}
 }
 
-func CreatePlayerProfile(PlayerID string, player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional, discord *discordgo.Session) []*discordgo.MessageSend {
+func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional, discord *discordgo.Session) *discordgo.WebhookParams {
+
+	PlayerID := P.Subject
 
 	if PlayerID == "" {
 		fmt.Println("No player ID given for profile")
-		return []*discordgo.MessageSend{}
+		return &discordgo.WebhookParams{}
 	}
 
-	PlayerName := getPlayerNames([]string{PlayerID}, player, entitlement, regions)[PlayerID]
+	mmr := GetPlayerMMR(&regions, &entitlement, &player, P.Subject, map[string]bool{})
+	ornament := GetOrnamentsFromPlayer(P.PlayerIdentity)
 
-	fmt.Println(PlayerName)
+	fmt.Println("Selceted: " + P.GameName)
 
-	FinalMessages := []*discordgo.MessageSend{}
+	embedCount := 3
 
-	return FinalMessages
+	Embeds := make([]*discordgo.MessageEmbed, embedCount)
+
+	RankHex := "0x" + RankDetails[mmr.CurrentRank].RankColor[:len(RankDetails[mmr.CurrentRank].RankColor)-2]
+
+	Color, err := strconv.ParseInt(RankHex, 0, 0)
+	checkError(err)
+
+	fmt.Println(int(Color))
+
+	// Title Embed
+
+	TitleDescription := ""
+
+	RR := 1.0 / 100.0 * float64(mmr.RankedRating)
+	RRProgressCharacters := float64(25)
+
+	RRS := int(math.Floor(RRProgressCharacters * RR))
+
+	RRStart := strings.Repeat("▓", RRS)
+	RREnd := strings.Repeat("░", int(RRProgressCharacters)-RRS)
+
+	RRProgressText := RRStart + RREnd + " `- MMR: ( " + strconv.Itoa(mmr.RankedRating) + "/100 )`"
+
+	TitleDescription = TitleDescription + RRProgressText
+
+	Embeds[0] = &discordgo.MessageEmbed{
+		Color: int(Color),
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    P.GameName + " " + supsub.ToSup(P.TagLine),
+			IconURL: RankDetails[mmr.CurrentRank].RankIcon,
+		},
+		Description: TitleDescription,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: ornament.PlayerCard.displayIcon,
+		},
+	}
+
+	completedEmbeds := 1
+
+	// Match History Embed
+
+	if len(P.matchHistory.History) > 0 {
+
+		Description := ""
+
+		for _, MatchInfo := range P.matchHistory.History {
+
+			Description = Description + "`Match Type: " + strings.ToUpper(MatchInfo.QueueID) + "` "
+			Description = Description + "`Score: " + strconv.Itoa(MatchInfo.previousMatchPlayerDetails.Stats.score) + "` "
+			Description = Description + "`K: " + strconv.Itoa(MatchInfo.previousMatchPlayerDetails.Stats.kills) + "` "
+			Description = Description + "`D: " + strconv.Itoa(MatchInfo.previousMatchPlayerDetails.Stats.deaths) + "` "
+			Description = Description + "`A: " + strconv.Itoa(MatchInfo.previousMatchPlayerDetails.Stats.assists) + "` "
+			Description = Description + "`Rounds: " + strconv.Itoa(MatchInfo.previousMatchPlayerDetails.Stats.roundsPlayed) + "` \n"
+
+		}
+
+		Embeds[completedEmbeds] = &discordgo.MessageEmbed{
+			Author: &discordgo.MessageEmbedAuthor{
+				Name: "Match History " + supsub.ToSup("Entries ( "+strconv.Itoa(P.matchHistory.BeginIndex)+" to "+strconv.Itoa(P.matchHistory.EndIndex)+" ) (Total "+strconv.Itoa(P.matchHistory.TotalEntries)+")"),
+			},
+			Description: Description,
+			Color:       int(Color),
+		}
+
+		completedEmbeds = completedEmbeds + 1
+
+	} else {
+
+		Embeds[completedEmbeds] = &discordgo.MessageEmbed{
+			Color:       int(Color),
+			Title:       "Match History",
+			Description: "No match history found",
+		}
+
+		completedEmbeds = completedEmbeds + 1
+
+	}
+
+	LoadoutDescription := ""
+	LoadoutIndex := 0
+
+	LongestName := 0
+
+	for _, WeaponName := range P.loadout.Items {
+
+		name := WeaponName.weaponInfo.displayName
+
+		SkinNameSplit := strings.Split(name, " ")
+
+		WeaponType := WeaponIDToName[WeaponName.TypeID]
+
+		if SkinNameSplit[len(SkinNameSplit)-1] == WeaponType {
+
+			SkinNameSplit[len(SkinNameSplit)-1] = ""
+
+		}
+
+		name = strings.Join(SkinNameSplit, " ")
+		name = strings.TrimRight(name, " ")
+
+		if len(name) > LongestName {
+			LongestName = len(name)
+		}
+
+	}
+
+	for ID, WeaponType := range WeaponIDToName {
+
+		LoadoutIndex = LoadoutIndex + 1
+
+		SkinName := P.loadout.Items[ID].weaponInfo.displayName
+
+		SkinNameSplit := strings.Split(SkinName, " ")
+
+		if SkinNameSplit[len(SkinNameSplit)-1] == WeaponType {
+
+			SkinNameSplit[len(SkinNameSplit)-1] = ""
+
+		}
+
+		SkinName = strings.Join(SkinNameSplit, " ")
+		SkinName = strings.TrimRight(SkinName, " ")
+
+		//BuddyName := strings.ReplaceAll(P.loadout.Items[ID].Buddy.displayName, "_", " ")
+
+		LoadoutDescription = LoadoutDescription + "`" + StringLengther(WeaponType+":", 10) + StringLengther(SkinName, LongestName+1) + "`"
+
+		if P.loadout.Items[ID].Buddy.displayName != "" {
+
+			//LoadoutDescription = LoadoutDescription + " `Buddy: " + BuddyName + "`"
+
+		}
+
+		LoadoutDescription = LoadoutDescription + "\n"
+
+	}
+
+	Embeds[completedEmbeds] = &discordgo.MessageEmbed{
+		Author: &discordgo.MessageEmbedAuthor{
+			Name: "Loadout",
+		},
+		Description: LoadoutDescription,
+		Color:       int(Color),
+	}
+
+	fmt.Println("Got profile!")
+
+	return &discordgo.WebhookParams{
+		Embeds: Embeds,
+	}
 
 }
 
@@ -1045,35 +1213,52 @@ func Request_match(player_info PlayerInfo, entitlements EntitlementsTokenRespons
 
 	CommandHandlers["select_player"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
+		Response := &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{},
+		}
+
+		Response.Data.Flags = discordgo.MessageFlagsEphemeral
+
+		s.InteractionRespond(i.Interaction, Response)
+
 		PlayerID := i.MessageComponentData().Values[0]
 
 		fmt.Println("ID: " + PlayerID)
 
-		CreatePlayerProfile(PlayerID, player_info, entitlements, regional, discord)
+		var P CurrentMatchPlayer
 
-		/*for I, Message := range messages {
+		for _, Ply := range MatchInfo.Players {
 
-			if Message == nil {
+			if Ply.Subject != PlayerID {
 				continue
 			}
 
-			fmt.Println("T : " + strconv.Itoa(I))
+			P = Ply
 
-			_, err := discord.ChannelMessageSendComplex(ChannelID, Message)
-			checkError(err)
+		}
 
-		}*/
+		loadout := GetMatchLoudout(MatchInfo.MatchID, P.Subject, player_info, entitlements, regional)[P.Subject]
 
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Requested",
-			},
-		})
+		PlayerNames := getPlayerNames([]string{P.Subject}, player_info, entitlements, regional)[PlayerID]
+		matchHistory, err := GetMatchHistoryOfUUID(P.Subject, 0, 10, &regional, &entitlements, player_info)
+		checkError(err)
 
-		s.InteractionResponseDelete(i.Interaction)
+		input := &ProfileEmbedInput{
+			Subject:        P.Subject,
+			CharacterID:    P.CharacterID,
+			PlayerIdentity: P.PlayerIdentity,
+			GameName:       PlayerNames["name"],
+			TagLine:        PlayerNames["tagLine"],
+			matchHistory:   matchHistory,
+			loadout:        &loadout,
+		}
 
-		fmt.Println(i.ChannelID)
+		FinalResponse := CreatePlayerProfile(input, player_info, entitlements, regional, discord)
+
+		FinalResponse.Flags = discordgo.MessageFlagsEphemeral
+
+		s.FollowupMessageCreate(i.Interaction, true, FinalResponse)
 
 	}
 }

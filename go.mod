@@ -4,6 +4,8 @@ go 1.24.2
 
 require github.com/goccy/go-yaml v1.17.1
 
+require github.com/lynn9388/supsub v0.0.0-20210304091550-458423b0e16a
+
 require (
 	github.com/bwmarrin/discordgo v0.28.1
 	github.com/gorilla/websocket v1.4.2 // indirect

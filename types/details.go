@@ -182,6 +182,7 @@ func Init_val_details() {
 	InitAgents()
 	InitMaps()
 	InitRanks()
+	Init_Weapons()
 
 	// Initialize Map details
 
