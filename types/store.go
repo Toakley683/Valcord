@@ -245,6 +245,22 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, entitlement Entitleme
 
 			shop := RequestNightMarket(player, entitlement, regional)
 
+			if len(shop) <= 0 {
+
+				message_list := make([]discordgo.MessageSend, 1)
+
+				message_list[0] = discordgo.MessageSend{
+					Content:         "`No Night Market available`",
+					TTS:             false,
+					Components:      []discordgo.MessageComponent{},
+					Files:           []*discordgo.File{},
+					AllowedMentions: &discordgo.MessageAllowedMentions{},
+				}
+
+				return message_list
+
+			}
+
 			message_list = make([]discordgo.MessageSend, 1)
 
 			embeds := make([]*discordgo.MessageEmbed, len(shop))
@@ -316,6 +332,25 @@ func RequestStoreFront(player PlayerInfo, entitlement EntitlementsTokenResponse,
 
 }
 
+func GetWeaponData(ItemID string) map[string]interface{} {
+
+	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/weapons/skinlevels/"+ItemID, nil)
+	checkError(err)
+
+	res, err := Client.Do(req)
+	checkError(err)
+
+	defer res.Body.Close()
+
+	var weapon_data map[string]interface{}
+
+	weapon_data, err = GetJSON(res)
+	checkError(err)
+
+	return weapon_data["data"].(map[string]interface{})
+
+}
+
 // Request Featured Banner shop
 
 func RequestFeaturedBanner(player PlayerInfo, entitlement EntitlementsTokenResponse, regional Regional) []FeaturedBundle {
@@ -342,27 +377,43 @@ func RequestFeaturedBanner(player PlayerInfo, entitlement EntitlementsTokenRespo
 			storeItem_data := s_item.(map[string]interface{})
 			item := storeItem_data["Item"].(map[string]interface{})
 
-			req, err := http.NewRequest("GET", "https://valorant-api.com/v1/weapons/skinlevels/"+item["ItemID"].(string), nil)
-			checkError(err)
+			var displayName string = ""
+			var displayIcon string = ""
+			var video_stream string = ""
 
-			res, err := Client.Do(req)
-			checkError(err)
+			switch item["ItemTypeID"].(string) {
+			case "e7c63390-eda7-46e0-bb7a-a6abdacd2433":
+				// Is weapon
+				data := GetWeaponData(item["ItemID"].(string))
+				displayName = data["displayName"].(string)
+				displayIcon = "https://media.valorant-api.com/weaponskinlevels/" + item["ItemID"].(string) + "/displayicon.png"
+				video_stream = data["streamedVideo"].(string)
+			case "dd3bf334-87f3-40bd-b043-682a57a8dc3a":
+				// Is Buddy
+				data := BuddyData(item["ItemID"].(string))
+				displayName = data.displayName
+				displayIcon = data.displayIcon
+			case "d5f120f8-ff8c-4aac-92ea-f2b5acbe9475":
+				// Is Spray
+				data := SprayData(item["ItemID"].(string))
+				displayName = data.displayName
 
-			defer res.Body.Close()
+				if data.animationGif != "" {
+					displayIcon = data.animationGif
+				} else {
+					displayIcon = data.fullTransparent
+				}
 
-			var weapon_data map[string]interface{}
+			case "3f296c07-64c3-494c-923b-fe692a4fa1bd":
+				// Is Card
+				data := CardData(item["ItemID"].(string))
+				displayName = data.displayName
+				displayIcon = data.wideArt
+			case "de7caa6b-adf7-4588-bbd1-143831e786c6":
+				// Is Title
+				data := TitleData(item["ItemID"].(string))
+				displayName = data.titleText
 
-			weapon_data, err = GetJSON(res)
-			checkError(err)
-
-			skin_data := weapon_data["data"].(map[string]interface{})
-
-			var video_stream string
-
-			if skin_data["streamedVideo	"] == nil {
-				video_stream = ""
-			} else {
-				video_stream = skin_data["streamedVideo	"].(string)
 			}
 
 			final_item := StoreItem{
@@ -370,8 +421,8 @@ func RequestFeaturedBanner(player PlayerInfo, entitlement EntitlementsTokenRespo
 					ItemTypeID:    item["ItemTypeID"].(string),
 					ItemID:        item["ItemID"].(string),
 					Amount:        int(item["Amount"].(float64)),
-					Name:          skin_data["displayName"].(string),
-					displayIcon:   "https://media.valorant-api.com/weaponskinlevels/" + item["ItemID"].(string) + "/displayicon.png",
+					Name:          displayName,
+					displayIcon:   displayIcon,
 					streamedVideo: video_stream,
 				},
 				BasePrice:       int(storeItem_data["BasePrice"].(float64)),
@@ -878,6 +929,10 @@ func RequestAccessoryShop(player PlayerInfo, entitlement EntitlementsTokenRespon
 func RequestNightMarket(player PlayerInfo, entitlement EntitlementsTokenResponse, regional Regional) []ItemOffer {
 
 	store_front := RequestStoreFront(player, entitlement, regional)
+
+	if store_front["BonusStore"] == nil {
+		return []ItemOffer{}
+	}
 
 	nightmarket_array := store_front["BonusStore"].(map[string]interface{})
 
