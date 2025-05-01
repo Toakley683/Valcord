@@ -1,6 +1,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -17,6 +18,8 @@ type LoadoutItem struct {
 type Expression struct {
 	AssetID string
 	TypeID  string
+	Name    string
+	IconURL string
 }
 
 type Loadout struct {
@@ -119,6 +122,50 @@ func GetWeaponFromID(ID string) WeaponInfo {
 
 }
 
+func GetUnlockedAgents(player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) []PlayableAgent {
+
+	//pd.{Shard}.a.pvp.net/store/v1/entitlements/{PlayerID}/01bb38e1-da47-4e6a-9b3d-945fe4655707 < AgentTypeID
+
+	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/store/v1/entitlements/"+player.sub+"/01bb38e1-da47-4e6a-9b3d-945fe4655707", nil)
+	checkError(err)
+
+	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
+	req.Header.Add("X-Riot-Entitlements-JWT", entitlement.token)
+	req.Header.Add("X-Riot-ClientPlatform", player.client_platform)
+	req.Header.Add("X-Riot-ClientVersion", player.version.riotClientVersion)
+
+	res, err := Client.Do(req)
+	checkError(err)
+
+	defer res.Body.Close()
+
+	var tier_data map[string]interface{}
+
+	tier_data, err = GetJSON(res)
+	checkError(err)
+
+	if tier_data["Entitlements"] == nil {
+		return []PlayableAgent{} // Return Empty agent list
+	}
+
+	agents := tier_data["Entitlements"].([]interface{})
+
+	agentArray := make([]PlayableAgent, len(agents))
+
+	for I, AgentData := range agents {
+
+		AgentData := AgentData.(map[string]interface{})
+
+		AgentID := AgentData["ItemID"].(string)
+
+		agentArray[I] = AgentDetails[AgentID]
+
+	}
+
+	return agentArray
+
+}
+
 func GetItem(itemD interface{}, loadoutItem chan LoadoutItem) {
 
 	item := itemD.(map[string]interface{})["Sockets"].(map[string]interface{})
@@ -168,6 +215,12 @@ func GetLoadout(LoudoutInfo map[string]interface{}, PUUID string) map[string]Loa
 
 	// map[string]Loadout ( Index == Player UUID )
 
+	if LoudoutInfo["Loadouts"] == nil {
+
+		return map[string]Loadout{}
+
+	}
+
 	loadouts := LoudoutInfo["Loadouts"].([]interface{})
 
 	fmt.Println("Loadout count: " + strconv.Itoa(len(loadouts)))
@@ -194,10 +247,45 @@ func GetLoadout(LoudoutInfo map[string]interface{}, PUUID string) map[string]Loa
 		for I, expression := range expressions {
 
 			expression := expression.(map[string]interface{})
+			Type := ""
+
+			switch expression["TypeID"].(string) {
+			case "03a572de-4234-31ed-d344-ababa488f981":
+				Type = "Flex"
+			case "d5f120f8-ff8c-4aac-92ea-f2b5acbe9475":
+				Type = "Spray"
+			}
+
+			Name := ""
+			IconURL := ""
+
+			if Type == "Spray" {
+
+				sprayData := SprayData(expression["AssetID"].(string))
+
+				Name = sprayData.displayName
+				IconURL = sprayData.fullTransparent
+
+			}
+
+			if Type == "Flex" {
+
+				flexData := FlexData(expression["AssetID"].(string))
+
+				Name = flexData.displayName
+				IconURL = flexData.displayIcon
+
+			}
+
+			if Type == "" {
+				checkError(errors.New("Player loadout, expression type unknown: (" + expression["TypeID"].(string) + ")"))
+			}
 
 			expressionsMap[I] = Expression{
 				AssetID: expression["AssetID"].(string),
 				TypeID:  expression["TypeID"].(string),
+				Name:    Name,
+				IconURL: IconURL,
 			}
 
 		}

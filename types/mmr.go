@@ -2,7 +2,6 @@ package types
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 )
@@ -175,33 +174,44 @@ func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, e
 		return MatchHistory{}, errors.New("history data was returned nil")
 	}
 
-	Histories := history_information["History"].([]interface{})
+	var matchHistory []MatchHistoryEntry
 
-	fmt.Println("Test Result: " + history_information["Subject"].(string))
+	if history_information["History"] != nil {
 
-	matchHistory := make([]MatchHistoryEntry, len(Histories))
+		Histories := history_information["History"].([]interface{})
 
-	for I, match := range Histories {
+		matchHistory = make([]MatchHistoryEntry, len(Histories))
 
-		go func() {
+		for I, match := range Histories {
 
-			Match := match.(map[string]interface{})
+			go func() {
 
-			oldMatchData := GetOldMatchPlayerDetails(Match["MatchID"].(string), UUID, *regions, *entitlement, player)
+				Match := match.(map[string]interface{})
 
-			matchHistory[I] = MatchHistoryEntry{
-				MatchID:                    Match["MatchID"].(string),
-				GameStartTime:              Match["GameStartTime"].(float64),
-				QueueID:                    Match["QueueID"].(string),
-				previousMatchPlayerDetails: oldMatchData,
-			}
+				oldMatchData := GetOldMatchPlayerDetails(Match["MatchID"].(string), UUID, *regions, *entitlement, player)
 
-		}()
+				matchHistory[I] = MatchHistoryEntry{
+					MatchID:                    Match["MatchID"].(string),
+					GameStartTime:              Match["GameStartTime"].(float64),
+					QueueID:                    Match["QueueID"].(string),
+					previousMatchPlayerDetails: oldMatchData,
+				}
 
+			}()
+
+		}
+	} else {
+		matchHistory = make([]MatchHistoryEntry, 0)
+	}
+
+	subject := ""
+
+	if history_information["Subject"] != nil {
+		subject = history_information["Subject"].(string)
 	}
 
 	return MatchHistory{
-		Subject:      history_information["Subject"].(string),
+		Subject:      subject,
 		BeginIndex:   int(history_information["BeginIndex"].(float64)),
 		EndIndex:     int(history_information["EndIndex"].(float64)),
 		TotalEntries: int(history_information["Total"].(float64)),

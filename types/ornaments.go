@@ -46,6 +46,11 @@ type Spray struct {
 	animationGif    string
 }
 
+type Flex struct {
+	displayName string
+	displayIcon string
+}
+
 // Get's spray data
 
 func SprayData(sprayuuid string) Spray {
@@ -76,6 +81,32 @@ func SprayData(sprayuuid string) Spray {
 		fullTransparent: "https://media.valorant-api.com/sprays/" + sprayuuid + "/fulltransparenticon.png",
 		animationPNG:    "https://media.valorant-api.com/sprays/" + sprayuuid + "/animation.png",
 		animationGif:    spray_data["animationGif"].(string),
+	}
+
+}
+
+// Get's flex data
+
+func FlexData(flexuuid string) Flex {
+
+	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/flex/"+flexuuid, nil)
+	checkError(err)
+
+	res, err := Client.Do(req)
+	checkError(err)
+
+	defer res.Body.Close()
+
+	var flex_data map[string]interface{}
+
+	data, err := GetJSON(res)
+	checkError(err)
+
+	flex_data = data["data"].(map[string]interface{})
+
+	return Flex{
+		displayName: flex_data["displayName"].(string),
+		displayIcon: "https://media.valorant-api.com/flex/" + flexuuid + "/displayicon.png",
 	}
 
 }
@@ -214,26 +245,42 @@ func GetOrnamentsFromPlayer(plr_data MatchPlayerIdentity) Ornaments {
 	border_info, err = GetJSON(res)
 	checkError(err)
 
-	border_data := border_info["data"].(map[string]interface{})
+	ornament := Ornaments{}
 
-	ornament := Ornaments{
-		Title: Title{
-			displayName:        title_data["displayName"].(string),
-			titleText:          title_data["titleText"].(string),
-			isHiddenIfNotOwned: title_data["isHiddenIfNotOwned"].(bool),
-		},
-		PlayerCard: PlayerCard{
-			displayName:        card_data["displayName"].(string),
-			isHiddenIfNotOwned: card_data["isHiddenIfNotOwned"].(bool),
-			displayIcon:        "https://media.valorant-api.com/playercards/" + plr_data.PlayerCardID + "/displayicon.png",
-			wideArt:            "https://media.valorant-api.com/playercards/" + plr_data.PlayerCardID + "/wideart.png",
-			largeArt:           "https://media.valorant-api.com/playercards/" + plr_data.PlayerCardID + "/largeart.png",
-		},
-		LevelBorder: LevelBorder{
-			displayName:   border_data["displayName"].(string),
-			startingLevel: border_data["startingLevel"].(float64),
-			iconURL:       "https://media.valorant-api.com/levelborders/" + plr_data.PreferredLevelBorderID + "/levelnumberappearance.png",
-		},
+	if border_info["data"] != nil {
+
+		border_data := border_info["data"].(map[string]interface{})
+
+		titleDisplayName := ""
+		titleTitleText := ""
+
+		if title_data["displayName"] != nil {
+			titleDisplayName = title_data["displayName"].(string)
+		}
+
+		if title_data["titleTitleText"] != nil {
+			titleTitleText = title_data["titleText"].(string)
+		}
+
+		ornament = Ornaments{
+			Title: Title{
+				displayName:        titleDisplayName,
+				titleText:          titleTitleText,
+				isHiddenIfNotOwned: title_data["isHiddenIfNotOwned"].(bool),
+			},
+			PlayerCard: PlayerCard{
+				displayName:        card_data["displayName"].(string),
+				isHiddenIfNotOwned: card_data["isHiddenIfNotOwned"].(bool),
+				displayIcon:        "https://media.valorant-api.com/playercards/" + plr_data.PlayerCardID + "/displayicon.png",
+				wideArt:            "https://media.valorant-api.com/playercards/" + plr_data.PlayerCardID + "/wideart.png",
+				largeArt:           "https://media.valorant-api.com/playercards/" + plr_data.PlayerCardID + "/largeart.png",
+			},
+			LevelBorder: LevelBorder{
+				displayName:   border_data["displayName"].(string),
+				startingLevel: border_data["startingLevel"].(float64),
+				iconURL:       "https://media.valorant-api.com/levelborders/" + plr_data.PreferredLevelBorderID + "/levelnumberappearance.png",
+			},
+		}
 	}
 
 	return ornament

@@ -76,7 +76,7 @@ func main() {
 
 	// Listen for matches to auto-send match data
 
-	Types.ListenForMatch(general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data, Types.Client, time.Second*10, discord)
+	Types.ListenForMatch(general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data, Types.Client, time.Second*20, discord)
 
 	log.Println("Press Ctrl+C to exit")
 	<-stop

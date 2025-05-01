@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -273,6 +274,7 @@ func ListenForMatch(player PlayerInfo, entitlement EntitlementsTokenResponse, re
 		for {
 
 			fmt.Println("Checking match status..")
+			fmt.Println("MatchID: " + lastMatchID)
 
 			lastAgentSelectID = CheckForAgentSelect(player, entitlement, regions, client, lastAgentSelectID, discord)
 			lastMatchID = CheckForMatch(player, entitlement, regions, client, lastMatchID, discord)
@@ -708,11 +710,15 @@ func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, enti
 		},
 		discordgo.ActionsRow{
 			Components: []discordgo.MessageComponent{
-
 				discordgo.Button{
 					CustomID: "exit_agent_select",
 					Label:    "Exit",
 					Style:    discordgo.DangerButton,
+				},
+				discordgo.Button{
+					CustomID: "random_agent",
+					Label:    "Lock random agent",
+					Style:    discordgo.PrimaryButton,
 				},
 			},
 		},
@@ -1037,7 +1043,7 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement En
 
 	fmt.Println("Selceted: " + P.GameName)
 
-	embedCount := 3
+	embedCount := 4
 
 	Embeds := make([]*discordgo.MessageEmbed, embedCount)
 
@@ -1060,7 +1066,7 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement En
 	RRStart := strings.Repeat("▓", RRS)
 	RREnd := strings.Repeat("░", int(RRProgressCharacters)-RRS)
 
-	RRProgressText := RRStart + RREnd + " `- MMR: ( " + strconv.Itoa(mmr.RankedRating) + "/100 )`"
+	RRProgressText := RRStart + RREnd + " `- RR: ( " + strconv.Itoa(mmr.RankedRating) + "/100 )`"
 
 	TitleDescription = TitleDescription + RRProgressText
 
@@ -1184,6 +1190,24 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement En
 		Color:       int(Color),
 	}
 
+	completedEmbeds = completedEmbeds + 1
+
+	ExpressionDesc := ""
+
+	for I, ExpressionData := range P.loadout.Expressions {
+
+		ExpressionDesc = ExpressionDesc + "`Expression (" + strconv.Itoa(I) + ")` - [`" + ExpressionData.Name + "`](" + ExpressionData.IconURL + ") \n"
+
+	}
+
+	Embeds[completedEmbeds] = &discordgo.MessageEmbed{
+		Author: &discordgo.MessageEmbedAuthor{
+			Name: "Expressions",
+		},
+		Description: ExpressionDesc,
+		Color:       int(Color),
+	}
+
 	fmt.Println("Got profile!")
 
 	return &discordgo.WebhookParams{
@@ -1269,6 +1293,8 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 	AgentSelect := GetAgentSelectInfo(player_info, entitlements, regional)
 
+	Players := make([]CurrentAgentSelectPlayer, len(AgentSelect.AllyTeam.Players)+len(AgentSelect.EnemyTeam.Players))
+
 	messages := NewAgentSelectEmbed(AgentSelect, player_info, entitlements, regional)
 
 	for I, Message := range messages {
@@ -1286,31 +1312,151 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 	CommandHandlers["select_player_agent"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Requested",
-			},
-		})
+		Response := &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{},
+		}
 
-		s.InteractionResponseDelete(i.Interaction)
+		Response.Data.Flags = discordgo.MessageFlagsEphemeral
 
-		fmt.Println(i.ChannelID)
+		s.InteractionRespond(i.Interaction, Response)
+
+		PlayerID := i.MessageComponentData().Values[0]
+
+		fmt.Println("ID: " + PlayerID)
+
+		var P CurrentAgentSelectPlayer
+
+		for _, Ply := range Players {
+
+			if Ply.Subject != PlayerID {
+				continue
+			}
+
+			P = Ply
+
+		}
+
+		loadout := GetAgentSelectLoudout(AgentSelect.ID, P.Subject, player_info, entitlements, regional)[P.Subject]
+
+		PlayerNames := getPlayerNames([]string{P.Subject}, player_info, entitlements, regional)[PlayerID]
+		matchHistory, err := GetMatchHistoryOfUUID(P.Subject, 0, 10, &regional, &entitlements, player_info)
+		checkError(err)
+
+		input := &ProfileEmbedInput{
+			Subject:        P.Subject,
+			CharacterID:    P.CharacterID,
+			PlayerIdentity: P.PlayerIdentity,
+			GameName:       PlayerNames["name"],
+			TagLine:        PlayerNames["tagLine"],
+			matchHistory:   matchHistory,
+			loadout:        &loadout,
+		}
+
+		FinalResponse := CreatePlayerProfile(input, player_info, entitlements, regional, discord)
+
+		FinalResponse.Flags = discordgo.MessageFlagsEphemeral
+
+		s.FollowupMessageCreate(i.Interaction, true, FinalResponse)
 
 	}
 
 	CommandHandlers["exit_agent_select"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: "Requested",
-			},
-		})
+		go func() {
 
-		s.InteractionResponseDelete(i.Interaction)
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Exiting..",
+				},
+			})
 
-		fmt.Println(i.ChannelID)
+			req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/quit", nil)
+			checkError(err)
+
+			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
+			req.Header.Add("X-Riot-Entitlements-JWT", entitlements.token)
+			req.Header.Add("X-Riot-ClientPlatform", player_info.client_platform)
+			req.Header.Add("X-Riot-ClientVersion", player_info.version.version)
+
+			_, err = Client.Do(req)
+			checkError(err)
+
+			time.Sleep(time.Second * 3)
+
+			s.InteractionResponseDelete(i.Interaction)
+
+		}()
+
+	}
+
+	CommandHandlers["random_agent"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+		go func() {
+
+			Agents := GetUnlockedAgents(player_info, entitlements, regional)
+
+			CurrentlyPlayedAgents := map[string]bool{}
+
+			AgentSelectData := GetAgentSelectInfo(player_info, entitlements, regional)
+
+			for _, Plr := range AgentSelectData.AllyTeam.Players {
+
+				if Plr.CharacterID == "" {
+					continue
+				}
+
+				CurrentlyPlayedAgents[Plr.CharacterID] = true
+
+			}
+
+			FinalAgentList := make([]PlayableAgent, len(Agents)-len(CurrentlyPlayedAgents))
+
+			AgentLoopI := 0
+
+			for _, Agent := range Agents {
+
+				if CurrentlyPlayedAgents[Agent.UUID] {
+					continue
+				}
+
+				FinalAgentList[AgentLoopI] = Agent
+				AgentLoopI = AgentLoopI + 1
+
+			}
+
+			fmt.Println("Requesting random agent..")
+			fmt.Println("Playable Agent count: " + strconv.Itoa(len(FinalAgentList)))
+
+			AgentIndex := rand.Intn(len(FinalAgentList) - 1)
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Chose: " + FinalAgentList[AgentIndex].displayName,
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+
+			req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/select/"+FinalAgentList[AgentIndex].UUID, nil)
+			checkError(err)
+
+			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
+			req.Header.Add("X-Riot-Entitlements-JWT", entitlements.token)
+			req.Header.Add("X-Riot-ClientPlatform", player_info.client_platform)
+			req.Header.Add("X-Riot-ClientVersion", player_info.version.version)
+
+			_, err = Client.Do(req)
+			checkError(err)
+
+			time.Sleep(time.Millisecond * 500)
+
+			s.InteractionResponseDelete(i.Interaction)
+
+		}()
 
 	}
 

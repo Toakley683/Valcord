@@ -67,6 +67,7 @@ func InitAgents() {
 		agent_info := Agent.(map[string]interface{})
 
 		agent := PlayableAgent{
+			UUID:             agent_info["uuid"].(string),
 			displayName:      agent_info["displayName"].(string),
 			description:      agent_info["description"].(string),
 			developerName:    agent_info["developerName"].(string),
@@ -191,6 +192,7 @@ func Init_val_details() {
 // Data structures for organization
 
 type PlayableAgent struct {
+	UUID             string
 	displayName      string
 	description      string
 	developerName    string
