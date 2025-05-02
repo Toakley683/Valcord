@@ -319,6 +319,7 @@ func GetSeasons(gamemodeName string, gamemodeData map[string]interface{}) ([]*Se
 				winsByTier_data := SeasonData["WinsByTier"].(map[string]interface{})
 
 				WinsByTier = make(map[string]int, len(winsByTier_data))
+				// ^ Does not cause thread memory issues due to making map inside of thread
 
 				for Index, Value := range winsByTier_data {
 
