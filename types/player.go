@@ -57,12 +57,14 @@ type PlayerInfo struct {
 
 // Uses the public access token from Entitlements, gets player data such as username, tagline and etc.
 
-func GetPlayerInfo(entitlements EntitlementsTokenResponse) PlayerInfo {
+func GetPlayerInfo() PlayerInfo {
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://auth.riotgames.com/userinfo", nil)
 	checkError(err)
 
-	req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
+	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
 
 	res, err := Client.Do(req)
 	checkError(err)
@@ -151,7 +153,7 @@ func GetPlayerInfo(entitlements EntitlementsTokenResponse) PlayerInfo {
 	defer res.Body.Close()
 
 	return PlayerInfo{
-		puuid:                 entitlements.subject,
+		puuid:                 entitlement.subject,
 		acct:                  ACCTInfoData,
 		ban:                   BansData,
 		country:               player_info["country"].(string),

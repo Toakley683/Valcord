@@ -148,9 +148,11 @@ func StringLengther(main string, num int) string {
 
 // Uses the region obtained from ShooterGame.log, along with match ID of current game
 
-func GetCurrentAgentSelectID(player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) string {
+func GetCurrentAgentSelectID(player PlayerInfo, regions Regional) string {
 
 	// Get MatchID of agent select
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/pregame/v1/players/"+player.puuid, nil)
 	checkError(err)
@@ -180,9 +182,11 @@ func GetCurrentAgentSelectID(player PlayerInfo, entitlement EntitlementsTokenRes
 
 }
 
-func GetCurrentMatchID(player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) string {
+func GetCurrentMatchID(player PlayerInfo, regions Regional) string {
 
 	// Get MatchID of current game
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/core-game/v1/players/"+player.puuid, nil)
 	checkError(err)
@@ -203,6 +207,15 @@ func GetCurrentMatchID(player PlayerInfo, entitlement EntitlementsTokenResponse,
 	checkError(err)
 
 	// Use MatchID of current game to get rest of game stats
+	fmt.Println(match_game_player)
+
+	if match_game_player["message"] != nil {
+
+		if match_game_player["errorCode"] == "BAD_CLAIMS" {
+			fmt.Println("Entitlement needs renewed")
+		}
+
+	}
 
 	if match_game_player["MatchID"] == nil {
 		return ""
@@ -212,9 +225,9 @@ func GetCurrentMatchID(player PlayerInfo, entitlement EntitlementsTokenResponse,
 
 }
 
-func CheckForMatch(player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional, client http.Client, lastMatchID string, discord *discordgo.Session) string {
+func CheckForMatch(player PlayerInfo, regions Regional, client http.Client, lastMatchID string, discord *discordgo.Session) string {
 
-	matchID := GetCurrentMatchID(player, entitlement, regions)
+	matchID := GetCurrentMatchID(player, regions)
 
 	if matchID == lastMatchID {
 		return matchID
@@ -231,15 +244,15 @@ func CheckForMatch(player PlayerInfo, entitlement EntitlementsTokenResponse, reg
 
 	fmt.Println("New match found: '" + matchID + "'")
 
-	Request_match(player, entitlement, regions, Settings["current_session_channel"], discord)
+	Request_match(player, regions, Settings["current_session_channel"], discord)
 
 	return matchID
 
 }
 
-func CheckForAgentSelect(player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional, client http.Client, lastAgentSelectID string, discord *discordgo.Session) string {
+func CheckForAgentSelect(player PlayerInfo, regions Regional, client http.Client, lastAgentSelectID string, discord *discordgo.Session) string {
 
-	agentSelectID := GetCurrentAgentSelectID(player, entitlement, regions)
+	agentSelectID := GetCurrentAgentSelectID(player, regions)
 
 	if agentSelectID == lastAgentSelectID {
 		return agentSelectID
@@ -256,13 +269,13 @@ func CheckForAgentSelect(player PlayerInfo, entitlement EntitlementsTokenRespons
 
 	fmt.Println("New agent select found: '" + agentSelectID + "'")
 
-	Request_agentSelect(player, entitlement, regions, Settings["current_session_channel"], discord)
+	Request_agentSelect(player, regions, Settings["current_session_channel"], discord)
 
 	return agentSelectID
 
 }
 
-func ListenForMatch(player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional, client http.Client, checkSecondDelta time.Duration, discord *discordgo.Session) {
+func ListenForMatch(player PlayerInfo, regions Regional, client http.Client, checkSecondDelta time.Duration, discord *discordgo.Session) {
 
 	go func() {
 
@@ -276,8 +289,8 @@ func ListenForMatch(player PlayerInfo, entitlement EntitlementsTokenResponse, re
 			fmt.Println("Checking match status..")
 			fmt.Println("MatchID: " + lastMatchID)
 
-			lastAgentSelectID = CheckForAgentSelect(player, entitlement, regions, client, lastAgentSelectID, discord)
-			lastMatchID = CheckForMatch(player, entitlement, regions, client, lastMatchID, discord)
+			lastAgentSelectID = CheckForAgentSelect(player, regions, client, lastAgentSelectID, discord)
+			lastMatchID = CheckForMatch(player, regions, client, lastMatchID, discord)
 
 			time.Sleep(checkSecondDelta)
 
@@ -287,17 +300,19 @@ func ListenForMatch(player PlayerInfo, entitlement EntitlementsTokenResponse, re
 
 }
 
-func GetAgentSelectInfo(player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) CurrentAgentSelect {
+func GetAgentSelectInfo(player PlayerInfo, regions Regional) CurrentAgentSelect {
 
 	// Get MatchID of agent select
 
-	var MatchID string = GetCurrentAgentSelectID(player, entitlement, regions)
+	var MatchID string = GetCurrentAgentSelectID(player, regions)
 
 	if MatchID == "" {
 		// Not in agent select
 		fmt.Println("Not currently in agent select")
 		return CurrentAgentSelect{}
 	}
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/pregame/v1/matches/"+MatchID, nil)
 	checkError(err)
@@ -415,16 +430,18 @@ func GetAgentSelectInfo(player PlayerInfo, entitlement EntitlementsTokenResponse
 
 }
 
-func GetCurrentMatchInfo(player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) CurrentGameMatch {
+func GetCurrentMatchInfo(player PlayerInfo, regions Regional) CurrentGameMatch {
 
 	// Get MatchID of current game
 
-	var MatchID string = GetCurrentMatchID(player, entitlement, regions)
+	var MatchID string = GetCurrentMatchID(player, regions)
 
 	if MatchID == "" {
 		fmt.Println("Not currently in match")
 		return CurrentGameMatch{}
 	}
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/core-game/v1/matches/"+MatchID, nil)
 	checkError(err)
@@ -536,7 +553,7 @@ func GetCurrentMatchInfo(player PlayerInfo, entitlement EntitlementsTokenRespons
 
 }
 
-func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) []*discordgo.MessageSend {
+func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, regions Regional) []*discordgo.MessageSend {
 
 	PlayerIDs := make([]string, len(agentSelect.AllyTeam.Players)+len(agentSelect.EnemyTeam.Players))
 
@@ -553,6 +570,8 @@ func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, enti
 
 	body := bytes.NewBuffer(json_data)
 	checkError(err)
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("PUT", "https://pd."+regions.shard+".a.pvp.net/name-service/v2/players", body)
 	checkError(err)
@@ -644,7 +663,7 @@ func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, enti
 			TagLine:        PlayerNameLookup[P.Subject]["tagLine"],
 		}
 
-		embeds0[I] = matchEmbedFromPlayer(&input, 3124052, &regions, &entitlement, &player, nil)
+		embeds0[I] = matchEmbedFromPlayer(&input, 3124052, &regions, &player, nil)
 
 	}
 
@@ -664,7 +683,7 @@ func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, enti
 			TagLine:        PlayerNameLookup[P.Subject]["tagLine"],
 		}
 
-		embeds1[I] = matchEmbedFromPlayer(&input, 11348780, &regions, &entitlement, &player, nil)
+		embeds1[I] = matchEmbedFromPlayer(&input, 11348780, &regions, &player, nil)
 
 	}
 
@@ -715,7 +734,7 @@ func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, enti
 				},
 				discordgo.Button{
 					CustomID: "random_agent",
-					Label:    "Lock random agent",
+					Label:    "Random agent",
 					Style:    discordgo.PrimaryButton,
 				},
 			},
@@ -727,13 +746,15 @@ func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, enti
 	return final_list
 }
 
-func getPlayerNames(PlayerIDS []string, player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) map[string]map[string]string {
+func getPlayerNames(PlayerIDS []string, player PlayerInfo, regions Regional) map[string]map[string]string {
 
 	json_data, err := json.MarshalIndent(PlayerIDS, "", "	")
 	checkError(err)
 
 	body := bytes.NewBuffer(json_data)
 	checkError(err)
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("PUT", "https://pd."+regions.shard+".a.pvp.net/name-service/v2/players", body)
 	checkError(err)
@@ -774,7 +795,7 @@ func getPlayerNames(PlayerIDS []string, player PlayerInfo, entitlement Entitleme
 
 }
 
-func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) []*discordgo.MessageSend {
+func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, regions Regional) []*discordgo.MessageSend {
 
 	PlayerIDs := make([]string, len(match.Players))
 
@@ -787,7 +808,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, entitlement Entitl
 		PlayerIDs[I] = Player.Subject
 	}
 
-	PlayerNameLookup := getPlayerNames(PlayerIDs, player, entitlement, regions)
+	PlayerNameLookup := getPlayerNames(PlayerIDs, player, regions)
 
 	var Title string = "Valorant Match"
 
@@ -871,7 +892,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, entitlement Entitl
 			TagLine:        P.TagLine,
 		}
 
-		embeds0[I] = matchEmbedFromPlayer(&input, 3124052, &regions, &entitlement, &player, &match.MatchmakingData)
+		embeds0[I] = matchEmbedFromPlayer(&input, 3124052, &regions, &player, &match.MatchmakingData)
 
 	}
 
@@ -898,7 +919,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, entitlement Entitl
 			TagLine:        P.TagLine,
 		}
 
-		embeds1[I] = matchEmbedFromPlayer(&input, 11348780, &regions, &entitlement, &player, &match.MatchmakingData)
+		embeds1[I] = matchEmbedFromPlayer(&input, 11348780, &regions, &player, &match.MatchmakingData)
 
 	}
 
@@ -931,7 +952,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, entitlement Entitl
 	return final_list
 }
 
-func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, entitlement *EntitlementsTokenResponse, playerInfo *PlayerInfo, matchmakingData *MatchmakingData) *discordgo.MessageEmbed {
+func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, playerInfo *PlayerInfo, matchmakingData *MatchmakingData) *discordgo.MessageEmbed {
 
 	fmt.Println("Loading: " + P.GameName)
 
@@ -945,7 +966,7 @@ func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, entitleme
 
 	}
 
-	mmr := GetPlayerMMR(regions, entitlement, playerInfo, P.Subject, IncludedGamemodes)
+	mmr := GetPlayerMMR(regions, playerInfo, P.Subject, IncludedGamemodes)
 
 	agent := AgentDetails[strings.ToLower(P.CharacterID)]
 
@@ -1027,7 +1048,7 @@ func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, entitleme
 	}
 }
 
-func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional, discord *discordgo.Session) *discordgo.WebhookParams {
+func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Regional, discord *discordgo.Session) *discordgo.WebhookParams {
 
 	PlayerID := P.Subject
 
@@ -1036,7 +1057,7 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement En
 		return &discordgo.WebhookParams{}
 	}
 
-	mmr := GetPlayerMMR(&regions, &entitlement, &player, P.Subject, map[string]bool{})
+	mmr := GetPlayerMMR(&regions, &player, P.Subject, map[string]bool{})
 	ornament := GetOrnamentsFromPlayer(P.PlayerIdentity)
 
 	fmt.Println("Selected: " + P.GameName + " " + supsub.ToSup(P.TagLine))
@@ -1212,13 +1233,13 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement En
 
 }
 
-func Request_match(player_info PlayerInfo, entitlements EntitlementsTokenResponse, regional Regional, ChannelID string, discord *discordgo.Session) {
+func Request_match(player_info PlayerInfo, regional Regional, ChannelID string, discord *discordgo.Session) {
 
 	fmt.Println("Requested Match")
 
-	MatchInfo := GetCurrentMatchInfo(player_info, entitlements, regional)
+	MatchInfo := GetCurrentMatchInfo(player_info, regional)
 
-	messages := newMatchEmbed(MatchInfo, player_info, entitlements, regional)
+	messages := newMatchEmbed(MatchInfo, player_info, regional)
 
 	for _, Message := range messages {
 
@@ -1256,10 +1277,10 @@ func Request_match(player_info PlayerInfo, entitlements EntitlementsTokenRespons
 
 		}
 
-		loadout := GetMatchLoudout(MatchInfo.MatchID, P.Subject, player_info, entitlements, regional)[P.Subject]
+		loadout := GetMatchLoudout(MatchInfo.MatchID, P.Subject, player_info, regional)[P.Subject]
 
-		PlayerNames := getPlayerNames([]string{P.Subject}, player_info, entitlements, regional)[PlayerID]
-		matchHistory, err := GetMatchHistoryOfUUID(P.Subject, 0, 10, &regional, &entitlements, player_info)
+		PlayerNames := getPlayerNames([]string{P.Subject}, player_info, regional)[PlayerID]
+		matchHistory, err := GetMatchHistoryOfUUID(P.Subject, 0, 10, &regional, player_info)
 		checkError(err)
 
 		input := &ProfileEmbedInput{
@@ -1272,7 +1293,7 @@ func Request_match(player_info PlayerInfo, entitlements EntitlementsTokenRespons
 			loadout:        &loadout,
 		}
 
-		FinalResponse := CreatePlayerProfile(input, player_info, entitlements, regional, discord)
+		FinalResponse := CreatePlayerProfile(input, player_info, regional, discord)
 
 		FinalResponse.Flags = discordgo.MessageFlagsEphemeral
 
@@ -1281,11 +1302,11 @@ func Request_match(player_info PlayerInfo, entitlements EntitlementsTokenRespons
 	}
 }
 
-func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenResponse, regional Regional, ChannelID string, discord *discordgo.Session) {
+func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID string, discord *discordgo.Session) {
 
 	fmt.Println("Requested Agent Select")
 
-	AgentSelect := GetAgentSelectInfo(player_info, entitlements, regional)
+	AgentSelect := GetAgentSelectInfo(player_info, regional)
 
 	Players := make([]CurrentAgentSelectPlayer, len(AgentSelect.AllyTeam.Players)+len(AgentSelect.EnemyTeam.Players))
 
@@ -1297,7 +1318,7 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 	}
 
-	messages := NewAgentSelectEmbed(AgentSelect, player_info, entitlements, regional)
+	messages := NewAgentSelectEmbed(AgentSelect, player_info, regional)
 
 	for _, Message := range messages {
 
@@ -1337,10 +1358,10 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 		}
 
-		loadout := GetAgentSelectLoudout(AgentSelect.ID, P.Subject, player_info, entitlements, regional)[P.Subject]
+		loadout := GetAgentSelectLoudout(AgentSelect.ID, P.Subject, player_info, regional)[P.Subject]
 
-		PlayerNames := getPlayerNames([]string{P.Subject}, player_info, entitlements, regional)[PlayerID]
-		matchHistory, err := GetMatchHistoryOfUUID(P.Subject, 0, 10, &regional, &entitlements, player_info)
+		PlayerNames := getPlayerNames([]string{P.Subject}, player_info, regional)[PlayerID]
+		matchHistory, err := GetMatchHistoryOfUUID(P.Subject, 0, 10, &regional, player_info)
 		checkError(err)
 
 		input := &ProfileEmbedInput{
@@ -1353,7 +1374,7 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 			loadout:        &loadout,
 		}
 
-		FinalResponse := CreatePlayerProfile(input, player_info, entitlements, regional, discord)
+		FinalResponse := CreatePlayerProfile(input, player_info, regional, discord)
 
 		FinalResponse.Flags = discordgo.MessageFlagsEphemeral
 
@@ -1370,12 +1391,14 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 			},
 		})
 
+		entitlement := GetEntitlementsToken(GetLockfile())
+
 		req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/quit", nil)
 		checkError(err)
 
 		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
-		req.Header.Add("X-Riot-Entitlements-JWT", entitlements.token)
+		req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
+		req.Header.Add("X-Riot-Entitlements-JWT", entitlement.token)
 		req.Header.Add("X-Riot-ClientPlatform", player_info.client_platform)
 		req.Header.Add("X-Riot-ClientVersion", player_info.version.version)
 
@@ -1390,11 +1413,11 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 	CommandHandlers["random_agent"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		Agents := GetUnlockedAgents(player_info, entitlements, regional)
+		Agents := GetUnlockedAgents(player_info, regional)
 
 		CurrentlyPlayedAgents := map[string]bool{}
 
-		AgentSelectData := GetAgentSelectInfo(player_info, entitlements, regional)
+		AgentSelectData := GetAgentSelectInfo(player_info, regional)
 
 		for _, Plr := range AgentSelectData.AllyTeam.Players {
 
@@ -1434,12 +1457,14 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 			},
 		})
 
+		entitlement := GetEntitlementsToken(GetLockfile())
+
 		req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/select/"+FinalAgentList[AgentIndex].UUID, nil)
 		checkError(err)
 
 		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
-		req.Header.Add("X-Riot-Entitlements-JWT", entitlements.token)
+		req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
+		req.Header.Add("X-Riot-Entitlements-JWT", entitlement.token)
 		req.Header.Add("X-Riot-ClientPlatform", player_info.client_platform)
 		req.Header.Add("X-Riot-ClientVersion", player_info.version.version)
 

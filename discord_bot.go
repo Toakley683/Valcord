@@ -107,7 +107,7 @@ func setupComponents() {
 
 		s.InteractionResponseDelete(i.Interaction)
 
-		Types.Request_agentSelect(general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data, i.ChannelID, s)
+		Types.Request_agentSelect(general_valorant_information.player_info, general_valorant_information.regional_data, i.ChannelID, s)
 
 	}
 
@@ -122,17 +122,17 @@ func setupComponents() {
 
 		s.InteractionResponseDelete(i.Interaction)
 
-		Types.Request_match(general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data, i.ChannelID, s)
+		Types.Request_match(general_valorant_information.player_info, general_valorant_information.regional_data, i.ChannelID, s)
 
 	}
 
 	Types.CommandHandlers["request_shop"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		fmt.Println("Shop has been requested by `" + i.User.Username + "`")
+		fmt.Println("Shop has been requested")
 
 		Type := i.ApplicationCommandData().Options[0].Value.(string)
 
-		Messages := Types.RequestShopEmbed(Type, general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data)
+		Messages := Types.RequestShopEmbed(Type, general_valorant_information.player_info, general_valorant_information.regional_data)
 
 		for _, Message := range Messages {
 			_, err := s.ChannelMessageSendComplex(i.ChannelID, &Message)

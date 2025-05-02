@@ -120,9 +120,11 @@ func GetWeaponFromID(ID string) WeaponInfo {
 
 }
 
-func GetUnlockedAgents(player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) []PlayableAgent {
+func GetUnlockedAgents(player PlayerInfo, regions Regional) []PlayableAgent {
 
 	//pd.{Shard}.a.pvp.net/store/v1/entitlements/{PlayerID}/01bb38e1-da47-4e6a-9b3d-945fe4655707 < AgentTypeID
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/store/v1/entitlements/"+player.sub+"/01bb38e1-da47-4e6a-9b3d-945fe4655707", nil)
 	checkError(err)
@@ -322,9 +324,11 @@ func GetLoadout(LoudoutInfo map[string]interface{}, PUUID string) map[string]Loa
 
 }
 
-func GetMatchLoudout(matchUUID string, PUUID string, player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) map[string]Loadout {
+func GetMatchLoudout(matchUUID string, PUUID string, player PlayerInfo, regions Regional) map[string]Loadout {
 
 	//"https://pd." + regions.shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/core-game/v1/matches/"+matchUUID+"/loadouts", nil)
 	checkError(err)
@@ -348,9 +352,11 @@ func GetMatchLoudout(matchUUID string, PUUID string, player PlayerInfo, entitlem
 
 }
 
-func GetAgentSelectLoudout(matchUUID string, PUUID string, player PlayerInfo, entitlement EntitlementsTokenResponse, regions Regional) map[string]Loadout {
+func GetAgentSelectLoudout(matchUUID string, PUUID string, player PlayerInfo, regions Regional) map[string]Loadout {
 
 	//"https://pd." + regions.shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/pregame/v1/matches/"+matchUUID+"/loadouts", nil)
 	checkError(err)

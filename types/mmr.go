@@ -84,9 +84,11 @@ type PreviousMatchPlayerDetails struct {
 	Stats       Stats
 }
 
-func GetOldMatchPlayerDetails(MatchID string, PUUID string, regions Regional, entitlement EntitlementsTokenResponse, player PlayerInfo) PreviousMatchPlayerDetails {
+func GetOldMatchPlayerDetails(MatchID string, PUUID string, regions Regional, player PlayerInfo) PreviousMatchPlayerDetails {
 
 	//https://pd.{Shard}.a.pvp.net/match-details/v1/matches/{MatchID}
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/match-details/v1/matches/"+MatchID, nil)
 	checkError(err)
@@ -139,7 +141,7 @@ func GetOldMatchPlayerDetails(MatchID string, PUUID string, regions Regional, en
 
 }
 
-func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, entitlement *EntitlementsTokenResponse, player PlayerInfo) (MatchHistory, error) {
+func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, player PlayerInfo) (MatchHistory, error) {
 
 	// Highest Range = 25
 
@@ -151,6 +153,8 @@ func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, e
 	EndString := strconv.Itoa(End)
 
 	// https://pd.{Shard}.a.pvp.net/match-history/v1/history/{Subject/PUUID}?startIndex={StartIndex}&endIndex={EndIndex}
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/match-history/v1/history/"+UUID+"?startIndex="+StartString+"&endIndex="+EndString, nil)
 	checkError(err)
@@ -190,7 +194,7 @@ func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, e
 
 				Match := match.(map[string]interface{})
 
-				oldMatchData := GetOldMatchPlayerDetails(Match["MatchID"].(string), UUID, *regions, *entitlement, player)
+				oldMatchData := GetOldMatchPlayerDetails(Match["MatchID"].(string), UUID, *regions, player)
 
 				Chan <- MatchHistoryEntry{
 					MatchID:                    Match["MatchID"].(string),
@@ -372,9 +376,11 @@ func GetSeasons(gamemodeName string, gamemodeData map[string]interface{}) ([]*Se
 
 }
 
-func GetPlayerMMR(regions *Regional, entitlement *EntitlementsTokenResponse, player *PlayerInfo, PlayerUUID string, ReturnedCareers map[string]bool) Career {
+func GetPlayerMMR(regions *Regional, player *PlayerInfo, PlayerUUID string, ReturnedCareers map[string]bool) Career {
 
 	//"https://pd." + regions.shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/mmr/v1/players/"+PlayerUUID, nil)
 	checkError(err)
@@ -393,6 +399,12 @@ func GetPlayerMMR(regions *Regional, entitlement *EntitlementsTokenResponse, pla
 
 	match_information, err = GetJSON(res)
 	checkError(err)
+
+	if match_information["QueueSkills"] == nil {
+
+		return Career{}
+
+	}
 
 	queueSkills := match_information["QueueSkills"].(map[string]interface{})
 

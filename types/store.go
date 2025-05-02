@@ -97,7 +97,7 @@ type PlayerShop struct {
 
 // Request Message Embed for shop items
 
-func RequestShopEmbed(shop_type string, player PlayerInfo, entitlement EntitlementsTokenResponse, regional Regional) []discordgo.MessageSend {
+func RequestShopEmbed(shop_type string, player PlayerInfo, regional Regional) []discordgo.MessageSend {
 
 	var message_list []discordgo.MessageSend
 
@@ -105,7 +105,7 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, entitlement Entitleme
 	case "banner":
 		{
 
-			shop := RequestFeaturedBanner(player, entitlement, regional)
+			shop := RequestFeaturedBanner(player, regional)
 
 			message_list = make([]discordgo.MessageSend, len(shop))
 
@@ -147,7 +147,7 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, entitlement Entitleme
 		{
 			message_list = make([]discordgo.MessageSend, 1)
 
-			shop := RequestRotationShop(player, entitlement, regional)
+			shop := RequestRotationShop(player, regional)
 
 			embeds := make([]*discordgo.MessageEmbed, len(shop.SingleItemStoreOffers))
 
@@ -185,7 +185,7 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, entitlement Entitleme
 		{
 			message_list = make([]discordgo.MessageSend, 1)
 
-			shop := RequestAccessoryShop(player, entitlement, regional)
+			shop := RequestAccessoryShop(player, regional)
 
 			embeds := make([]*discordgo.MessageEmbed, len(shop.Accessories))
 
@@ -243,7 +243,7 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, entitlement Entitleme
 	case "night_market":
 		{
 
-			shop := RequestNightMarket(player, entitlement, regional)
+			shop := RequestNightMarket(player, regional)
 
 			if len(shop) <= 0 {
 
@@ -300,11 +300,13 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, entitlement Entitleme
 
 // Uses token to get the player's storefront (Including cycling items)
 
-func RequestStoreFront(player PlayerInfo, entitlement EntitlementsTokenResponse, regional Regional) map[string]interface{} {
+func RequestStoreFront(player PlayerInfo, regional Regional) map[string]interface{} {
 
 	// Need to post an empty json object to return shop
 
 	payload := strings.NewReader("{}")
+
+	entitlement := GetEntitlementsToken(GetLockfile())
 
 	req, err := http.NewRequest("POST", "https://pd."+regional.shard+".a.pvp.net/store/v3/storefront/"+player.puuid, payload)
 	checkError(err)
@@ -353,9 +355,9 @@ func GetWeaponData(ItemID string) map[string]interface{} {
 
 // Request Featured Banner shop
 
-func RequestFeaturedBanner(player PlayerInfo, entitlement EntitlementsTokenResponse, regional Regional) []FeaturedBundle {
+func RequestFeaturedBanner(player PlayerInfo, regional Regional) []FeaturedBundle {
 
-	store_front := RequestStoreFront(player, entitlement, regional)
+	store_front := RequestStoreFront(player, regional)
 
 	featured_bundle_data := store_front["FeaturedBundle"].(map[string]interface{})
 	bundles_array := featured_bundle_data["Bundles"].([]interface{})
@@ -655,9 +657,9 @@ func RequestFeaturedBanner(player PlayerInfo, entitlement EntitlementsTokenRespo
 
 // Request Rotation shop
 
-func RequestRotationShop(player PlayerInfo, entitlement EntitlementsTokenResponse, regional Regional) SkinsPanelLayout {
+func RequestRotationShop(player PlayerInfo, regional Regional) SkinsPanelLayout {
 
-	store_front := RequestStoreFront(player, entitlement, regional)
+	store_front := RequestStoreFront(player, regional)
 
 	if store_front["SkinsPanelLayout"] == nil {
 
@@ -781,9 +783,9 @@ func RequestRotationShop(player PlayerInfo, entitlement EntitlementsTokenRespons
 
 // Request Rotation shop
 
-func RequestAccessoryShop(player PlayerInfo, entitlement EntitlementsTokenResponse, regional Regional) AccessoryShop {
+func RequestAccessoryShop(player PlayerInfo, regional Regional) AccessoryShop {
 
-	store_front := RequestStoreFront(player, entitlement, regional)
+	store_front := RequestStoreFront(player, regional)
 
 	accessory_shop_array := store_front["AccessoryStore"].(map[string]interface{})
 
@@ -926,9 +928,9 @@ func RequestAccessoryShop(player PlayerInfo, entitlement EntitlementsTokenRespon
 
 // Request Night Market
 
-func RequestNightMarket(player PlayerInfo, entitlement EntitlementsTokenResponse, regional Regional) []ItemOffer {
+func RequestNightMarket(player PlayerInfo, regional Regional) []ItemOffer {
 
-	store_front := RequestStoreFront(player, entitlement, regional)
+	store_front := RequestStoreFront(player, regional)
 
 	if store_front["BonusStore"] == nil {
 		return []ItemOffer{}
