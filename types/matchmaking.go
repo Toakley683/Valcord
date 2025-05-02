@@ -1295,6 +1295,18 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 	Players := make([]CurrentAgentSelectPlayer, len(AgentSelect.AllyTeam.Players)+len(AgentSelect.EnemyTeam.Players))
 
+	for Index, Plr := range AgentSelect.AllyTeam.Players {
+
+		Players[Index] = Plr
+
+	}
+
+	for Index, Plr := range AgentSelect.EnemyTeam.Players {
+
+		Players[len(AgentSelect.AllyTeam.Players)+Index] = Plr
+
+	}
+
 	messages := NewAgentSelectEmbed(AgentSelect, player_info, entitlements, regional)
 
 	for I, Message := range messages {
@@ -1329,6 +1341,8 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 		for _, Ply := range Players {
 
+			fmt.Println(Ply.Subject)
+
 			if Ply.Subject != PlayerID {
 				continue
 			}
@@ -1336,6 +1350,8 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 			P = Ply
 
 		}
+
+		fmt.Println("Test: " + P.Subject)
 
 		loadout := GetAgentSelectLoudout(AgentSelect.ID, P.Subject, player_info, entitlements, regional)[P.Subject]
 

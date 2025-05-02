@@ -210,11 +210,27 @@ func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, e
 		subject = history_information["Subject"].(string)
 	}
 
+	var BeginIndex int = 0
+	var EndIndex int = 0
+	var TotalEntries int = 0
+
+	if history_information["BeginIndex"] != nil {
+		BeginIndex = int(history_information["BeginIndex"].(float64))
+	}
+
+	if history_information["EndIndex"] != nil {
+		EndIndex = int(history_information["EndIndex"].(float64))
+	}
+
+	if history_information["Total"] != nil {
+		TotalEntries = int(history_information["Total"].(float64))
+	}
+
 	return MatchHistory{
 		Subject:      subject,
-		BeginIndex:   int(history_information["BeginIndex"].(float64)),
-		EndIndex:     int(history_information["EndIndex"].(float64)),
-		TotalEntries: int(history_information["Total"].(float64)),
+		BeginIndex:   BeginIndex,
+		EndIndex:     EndIndex,
+		TotalEntries: TotalEntries,
 		History:      matchHistory,
 	}, nil
 

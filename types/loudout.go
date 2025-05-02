@@ -229,7 +229,15 @@ func GetLoadout(LoudoutInfo map[string]interface{}, PUUID string) map[string]Loa
 
 	for _, playerLoadout := range loadouts {
 
-		playerLoadout := playerLoadout.(map[string]interface{})["Loadout"].(map[string]interface{})
+		pLoudout := playerLoadout.(map[string]interface{})
+
+		var playerLoadout map[string]interface{}
+
+		if pLoudout["Loadout"] == nil {
+			playerLoadout = pLoudout
+		} else {
+			playerLoadout = pLoudout["Loadout"].(map[string]interface{})
+		}
 
 		if PUUID != "" {
 
