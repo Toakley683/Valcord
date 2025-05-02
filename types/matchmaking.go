@@ -505,8 +505,6 @@ func GetCurrentMatchInfo(player PlayerInfo, entitlement EntitlementsTokenRespons
 
 	}
 
-	fmt.Println(matchmakingStruct.QueueID)
-
 	connection_details_struct := ConnectionDetails{
 		GameServerHosts:        GameServerHosts,
 		GameServerHost:         connection_details["GameServerHost"].(string),
@@ -951,7 +949,7 @@ func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, entitleme
 
 	agent := AgentDetails[strings.ToLower(P.CharacterID)]
 
-	fmt.Println(mmr.PeakRank)
+	fmt.Println(RankDetails[mmr.PeakRank].TierName)
 
 	CurrentGameMMR := mmr.Competitive
 
@@ -1041,7 +1039,7 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement En
 	mmr := GetPlayerMMR(&regions, &entitlement, &player, P.Subject, map[string]bool{})
 	ornament := GetOrnamentsFromPlayer(P.PlayerIdentity)
 
-	fmt.Println("Selceted: " + P.GameName)
+	fmt.Println("Selected: " + P.GameName + " " + supsub.ToSup(P.TagLine))
 
 	embedCount := 4
 
@@ -1051,8 +1049,6 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement En
 
 	Color, err := strconv.ParseInt(RankHex, 0, 0)
 	checkError(err)
-
-	fmt.Println(int(Color))
 
 	// Title Embed
 
@@ -1208,7 +1204,7 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, entitlement En
 		Color:       int(Color),
 	}
 
-	fmt.Println("Got profile!")
+	fmt.Println("Profile: Obtained")
 
 	return &discordgo.WebhookParams{
 		Embeds: Embeds,
@@ -1247,8 +1243,6 @@ func Request_match(player_info PlayerInfo, entitlements EntitlementsTokenRespons
 		s.InteractionRespond(i.Interaction, Response)
 
 		PlayerID := i.MessageComponentData().Values[0]
-
-		fmt.Println("ID: " + PlayerID)
 
 		var P CurrentMatchPlayer
 
@@ -1289,17 +1283,13 @@ func Request_match(player_info PlayerInfo, entitlements EntitlementsTokenRespons
 
 func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenResponse, regional Regional, ChannelID string, discord *discordgo.Session) {
 
-	fmt.Println("Requested Match")
+	fmt.Println("Requested Agent Select")
 
 	AgentSelect := GetAgentSelectInfo(player_info, entitlements, regional)
 
 	Players := make([]CurrentAgentSelectPlayer, len(AgentSelect.AllyTeam.Players)+len(AgentSelect.EnemyTeam.Players))
 
-	for Index, Plr := range AgentSelect.AllyTeam.Players {
-
-		Players[Index] = Plr
-
-	}
+	copy(Players, AgentSelect.AllyTeam.Players)
 
 	for Index, Plr := range AgentSelect.EnemyTeam.Players {
 
@@ -1309,13 +1299,11 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 	messages := NewAgentSelectEmbed(AgentSelect, player_info, entitlements, regional)
 
-	for I, Message := range messages {
+	for _, Message := range messages {
 
 		if Message == nil {
 			continue
 		}
-
-		fmt.Println("T : " + strconv.Itoa(I))
 
 		_, err := discord.ChannelMessageSendComplex(ChannelID, Message)
 		checkError(err)
@@ -1341,8 +1329,6 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 		for _, Ply := range Players {
 
-			fmt.Println(Ply.Subject)
-
 			if Ply.Subject != PlayerID {
 				continue
 			}
@@ -1350,8 +1336,6 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 			P = Ply
 
 		}
-
-		fmt.Println("Test: " + P.Subject)
 
 		loadout := GetAgentSelectLoudout(AgentSelect.ID, P.Subject, player_info, entitlements, regional)[P.Subject]
 

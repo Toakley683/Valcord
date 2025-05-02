@@ -2,9 +2,7 @@ package types
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
-	"strconv"
 )
 
 type LoadoutItem struct {
@@ -222,8 +220,6 @@ func GetLoadout(LoudoutInfo map[string]interface{}, PUUID string) map[string]Loa
 	}
 
 	loadouts := LoudoutInfo["Loadouts"].([]interface{})
-
-	fmt.Println("Loadout count: " + strconv.Itoa(len(loadouts)))
 
 	Loadouts := map[string]Loadout{}
 

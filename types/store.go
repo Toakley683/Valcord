@@ -661,7 +661,7 @@ func RequestRotationShop(player PlayerInfo, entitlement EntitlementsTokenRespons
 
 	if store_front["SkinsPanelLayout"] == nil {
 
-		fmt.Println("No rotation shop (Unsure why)")
+		fmt.Println("No rotation shop (Try again?)")
 		return SkinsPanelLayout{}
 
 	}

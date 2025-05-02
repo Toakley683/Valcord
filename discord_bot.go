@@ -128,11 +128,9 @@ func setupComponents() {
 
 	Types.CommandHandlers["request_shop"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		fmt.Println("Requested Shop")
+		fmt.Println("Shop has been requested by `" + i.User.Username + "`")
 
 		Type := i.ApplicationCommandData().Options[0].Value.(string)
-
-		fmt.Println(Type)
 
 		Messages := Types.RequestShopEmbed(Type, general_valorant_information.player_info, general_valorant_information.entitlements, general_valorant_information.regional_data)
 
@@ -169,7 +167,7 @@ func discord_setup() {
 
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 
-		fmt.Println("Ready")
+		fmt.Println("Discord bot: Ready")
 
 		important_channels["current_session_channel"], err = discord.Channel(settings["current_session_channel"])
 
@@ -206,20 +204,20 @@ func discord_setup() {
 
 	for _, v := range commands {
 
-		var test discordgo.ApplicationCommand
+		var command discordgo.ApplicationCommand
 
 		for _, y := range allCommands {
 
 			if y.Name == v.Name {
 
-				test = *y
+				command = *y
 				break
 
 			}
 
 		}
 
-		if test.Name == "" {
+		if command.Name == "" {
 
 			fmt.Println("Trying to init '" + v.Name + "'")
 
@@ -231,7 +229,7 @@ func discord_setup() {
 
 	}
 
-	fmt.Println(discord.State.User.ID)
+	fmt.Println("Discord bot UserID: " + discord.State.User.ID)
 
 }
 
