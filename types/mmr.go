@@ -184,13 +184,15 @@ func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, e
 
 		for I, match := range Histories {
 
+			Chan := make(chan MatchHistoryEntry)
+
 			go func() {
 
 				Match := match.(map[string]interface{})
 
 				oldMatchData := GetOldMatchPlayerDetails(Match["MatchID"].(string), UUID, *regions, *entitlement, player)
 
-				matchHistory[I] = MatchHistoryEntry{
+				Chan <- MatchHistoryEntry{
 					MatchID:                    Match["MatchID"].(string),
 					GameStartTime:              Match["GameStartTime"].(float64),
 					QueueID:                    Match["QueueID"].(string),
@@ -198,6 +200,8 @@ func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, e
 				}
 
 			}()
+
+			matchHistory[I] = <-Chan
 
 		}
 	} else {
