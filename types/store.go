@@ -120,7 +120,6 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, regional Regional) []
 							Name:    Item.Item.Name,
 							IconURL: CurrencyIDToImage[Item.CurrencyID],
 						},
-						Type: discordgo.EmbedTypeImage,
 						Image: &discordgo.MessageEmbedImage{
 							URL: Item.Item.displayIcon,
 						},
