@@ -1363,100 +1363,92 @@ func Request_agentSelect(player_info PlayerInfo, entitlements EntitlementsTokenR
 
 	CommandHandlers["exit_agent_select"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		go func() {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Exiting..",
+			},
+		})
 
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Exiting..",
-				},
-			})
+		req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/quit", nil)
+		checkError(err)
 
-			req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/quit", nil)
-			checkError(err)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
+		req.Header.Add("X-Riot-Entitlements-JWT", entitlements.token)
+		req.Header.Add("X-Riot-ClientPlatform", player_info.client_platform)
+		req.Header.Add("X-Riot-ClientVersion", player_info.version.version)
 
-			req.Header.Add("Content-Type", "application/json")
-			req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
-			req.Header.Add("X-Riot-Entitlements-JWT", entitlements.token)
-			req.Header.Add("X-Riot-ClientPlatform", player_info.client_platform)
-			req.Header.Add("X-Riot-ClientVersion", player_info.version.version)
+		_, err = Client.Do(req)
+		checkError(err)
 
-			_, err = Client.Do(req)
-			checkError(err)
+		time.Sleep(time.Second * 3)
 
-			time.Sleep(time.Second * 3)
-
-			s.InteractionResponseDelete(i.Interaction)
-
-		}()
+		s.InteractionResponseDelete(i.Interaction)
 
 	}
 
 	CommandHandlers["random_agent"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		go func() {
+		Agents := GetUnlockedAgents(player_info, entitlements, regional)
 
-			Agents := GetUnlockedAgents(player_info, entitlements, regional)
+		CurrentlyPlayedAgents := map[string]bool{}
 
-			CurrentlyPlayedAgents := map[string]bool{}
+		AgentSelectData := GetAgentSelectInfo(player_info, entitlements, regional)
 
-			AgentSelectData := GetAgentSelectInfo(player_info, entitlements, regional)
+		for _, Plr := range AgentSelectData.AllyTeam.Players {
 
-			for _, Plr := range AgentSelectData.AllyTeam.Players {
-
-				if Plr.CharacterID == "" {
-					continue
-				}
-
-				CurrentlyPlayedAgents[Plr.CharacterID] = true
-
+			if Plr.CharacterID == "" {
+				continue
 			}
 
-			FinalAgentList := make([]PlayableAgent, len(Agents)-len(CurrentlyPlayedAgents))
+			CurrentlyPlayedAgents[Plr.CharacterID] = true
 
-			AgentLoopI := 0
+		}
 
-			for _, Agent := range Agents {
+		FinalAgentList := make([]PlayableAgent, len(Agents)-len(CurrentlyPlayedAgents))
 
-				if CurrentlyPlayedAgents[Agent.UUID] {
-					continue
-				}
+		AgentLoopI := 0
 
-				FinalAgentList[AgentLoopI] = Agent
-				AgentLoopI = AgentLoopI + 1
+		for _, Agent := range Agents {
 
+			if CurrentlyPlayedAgents[Agent.UUID] {
+				continue
 			}
 
-			fmt.Println("Requesting random agent..")
-			fmt.Println("Playable Agent count: " + strconv.Itoa(len(FinalAgentList)))
+			FinalAgentList[AgentLoopI] = Agent
+			AgentLoopI = AgentLoopI + 1
 
-			AgentIndex := rand.Intn(len(FinalAgentList) - 1)
+		}
 
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "Chose: " + FinalAgentList[AgentIndex].displayName,
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
+		fmt.Println("Requesting random agent..")
+		fmt.Println("Playable Agent count: " + strconv.Itoa(len(FinalAgentList)))
 
-			req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/select/"+FinalAgentList[AgentIndex].UUID, nil)
-			checkError(err)
+		AgentIndex := rand.Intn(len(FinalAgentList) - 1)
 
-			req.Header.Add("Content-Type", "application/json")
-			req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
-			req.Header.Add("X-Riot-Entitlements-JWT", entitlements.token)
-			req.Header.Add("X-Riot-ClientPlatform", player_info.client_platform)
-			req.Header.Add("X-Riot-ClientVersion", player_info.version.version)
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Chose: " + FinalAgentList[AgentIndex].displayName,
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
 
-			_, err = Client.Do(req)
-			checkError(err)
+		req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/select/"+FinalAgentList[AgentIndex].UUID, nil)
+		checkError(err)
 
-			time.Sleep(time.Millisecond * 500)
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Authorization", "Bearer "+entitlements.accessToken)
+		req.Header.Add("X-Riot-Entitlements-JWT", entitlements.token)
+		req.Header.Add("X-Riot-ClientPlatform", player_info.client_platform)
+		req.Header.Add("X-Riot-ClientVersion", player_info.version.version)
 
-			s.InteractionResponseDelete(i.Interaction)
+		_, err = Client.Do(req)
+		checkError(err)
 
-		}()
+		time.Sleep(time.Millisecond * 500)
+
+		s.InteractionResponseDelete(i.Interaction)
 
 	}
 
