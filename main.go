@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	Types "valcord/types"
 )
@@ -19,8 +18,6 @@ func checkError(err error) {
 }
 
 var (
-	settings map[string]string = Types.Settings
-
 	general_valorant_information ValorantInformation
 )
 
@@ -50,7 +47,7 @@ func cleanup() {
 
 }
 
-func main() {
+func AppStartup() {
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
@@ -74,13 +71,14 @@ func main() {
 
 	discord_setup()
 
-	// Listen for matches to auto-send match data
-
-	Types.ListenForMatch(general_valorant_information.player_info, general_valorant_information.regional_data, Types.Client, time.Second*20, discord)
-
 	log.Println("Press Ctrl+C to exit")
 	<-stop
 
 	log.Println("Shutting down..")
+}
+
+func main() {
+
+	BeginChecks()
 
 }

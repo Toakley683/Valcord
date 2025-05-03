@@ -118,22 +118,22 @@ func check_directory() map[string]string {
 func get_default_settings() map[string]string {
 
 	var settings map[string]string = map[string]string{
-		"discord_api_token":       "DISCORD_TOKEN_HERE",
-		"server_id":               "SERVER_ID_HERE",
-		"owner_userid":            "USER_ID",
-		"current_session_channel": "DO NOT SET MANUALLY",
+		"discord_api_token":       "",
+		"server_id":               "",
+		"owner_userid":            "",
+		"current_session_channel": "",
 	}
 
 	return settings
 
 }
 
-func check_settings() map[string]string {
+func CheckSettings() map[string]string {
 
 	return check_directory()
 
 }
 
 var (
-	Settings map[string]string = check_settings()
+	Settings = CheckSettings()
 )

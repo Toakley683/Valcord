@@ -1,0 +1,198 @@
+package main
+
+import (
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
+
+	Types "valcord/types"
+)
+
+var (
+	settings map[string]string
+)
+
+func BeginChecks() {
+
+	settings = Types.CheckSettings()
+
+	PasteDiscordToken()
+}
+
+func PasteDiscordToken() {
+
+	// Request Discord Bot API Token
+
+	if settings["discord_api_token"] == "" {
+
+		app := tview.NewApplication()
+
+		text := tview.NewTextView().
+			SetText("Instructions on bot token: 'https://github.com/Toakley683/Valcord/wiki/Obtaining-a-Discord-Bot-Token'").
+			SetTextAlign(tview.AlignLeft).
+			SetDynamicColors(true).
+			SetWordWrap(true)
+
+		input := tview.NewInputField().
+			SetLabel("Enter Discord Bot Token: ").
+			SetPlaceholder(" [PASTE BOT TOKEN HERE]").
+			SetFieldWidth(125).
+			SetAcceptanceFunc(tview.InputFieldMaxLength(100))
+
+		input.SetDoneFunc(func(key tcell.Key) {
+
+			if key == tcell.KeyEnter {
+
+				app.Stop()
+
+				settings["discord_api_token"] = input.GetText()
+				settings["server_id"] = ""
+				settings["current_session_channel"] = ""
+				Types.CheckSettingsData(settings)
+
+				CheckForServerID()
+
+			}
+
+		})
+		input.SetBorder(true)
+
+		flex := tview.NewFlex().
+			SetDirection(tview.FlexRow).
+			AddItem(text, 2, 0, false).
+			AddItem(input, 3, 1, true).
+			AddItem(nil, 0, 1, false)
+
+		frame := tview.NewFrame(flex).
+			SetBorders(1, 1, 1, 1, 0, 0).
+			AddText("╡ Valcord ╞", true, tview.AlignCenter, tview.Styles.PrimaryTextColor).
+			SetBorders(1, 1, 1, 1, 0, 0)
+
+		if err := app.SetRoot(frame, true).Run(); err != nil {
+			panic(err)
+		}
+
+	} else {
+		CheckForServerID()
+	}
+
+}
+func CheckForServerID() {
+
+	// Request Session Channel ID
+
+	if settings["server_id"] == "" {
+
+		app := tview.NewApplication()
+
+		text := tview.NewTextView().
+			SetText("Instructions on ServerID: 'https://github.com/Toakley683/Valcord/wiki/Setting-Session-Channel'").
+			SetTextAlign(tview.AlignLeft).
+			SetDynamicColors(true).
+			SetWordWrap(true)
+
+		input := tview.NewInputField().
+			SetLabel("ServerID: ").
+			SetPlaceholder(" [PASTE SERVERID HERE]").
+			SetFieldWidth(125).
+			SetAcceptanceFunc(tview.InputFieldMaxLength(100))
+
+		input.SetDoneFunc(func(key tcell.Key) {
+
+			if key == tcell.KeyEnter {
+
+				app.Stop()
+
+				settings["server_id"] = input.GetText()
+				settings["current_session_channel"] = ""
+
+				Types.CheckSettingsData(settings)
+
+				CheckForChannelID()
+
+			}
+
+		})
+		input.
+			SetBorder(true).
+			SetTitleAlign(tview.AlignCenter)
+
+		flex := tview.NewFlex().
+			SetDirection(tview.FlexRow).
+			AddItem(text, 2, 0, false).
+			AddItem(input, 3, 1, true).
+			AddItem(nil, 0, 1, false)
+
+		frame := tview.NewFrame(flex).
+			SetBorders(1, 1, 1, 1, 0, 0).
+			AddText("╡ Valcord ╞", true, tview.AlignCenter, tview.Styles.PrimaryTextColor).
+			SetBorders(1, 1, 1, 1, 0, 0)
+
+		if err := app.SetRoot(frame, true).Run(); err != nil {
+			panic(err)
+		}
+
+	} else {
+		CheckForChannelID()
+	}
+
+}
+
+func CheckForChannelID() {
+
+	// Request Session Channel ID
+
+	if settings["current_session_channel"] == "" {
+
+		app := tview.NewApplication()
+
+		text := tview.NewTextView().
+			SetText("Instructions on Session channelID: 'https://github.com/Toakley683/Valcord/wiki/Setting-Session-Channel'").
+			SetTextAlign(tview.AlignLeft).
+			SetDynamicColors(true).
+			SetWordWrap(true)
+
+		input := tview.NewInputField().
+			SetLabel("Session Channel ID: ").
+			SetPlaceholder(" [PASTE CHANNELID HERE]").
+			SetFieldWidth(125).
+			SetAcceptanceFunc(tview.InputFieldMaxLength(100))
+
+		input.SetDoneFunc(func(key tcell.Key) {
+
+			if key == tcell.KeyEnter {
+
+				app.Stop()
+
+				settings["current_session_channel"] = input.GetText()
+
+				Types.CheckSettingsData(settings)
+
+				AppStartup()
+
+			}
+
+		})
+		input.
+			SetBorder(true).
+			SetTitleAlign(tview.AlignCenter)
+
+		flex := tview.NewFlex().
+			SetDirection(tview.FlexRow).
+			AddItem(text, 2, 0, false).
+			AddItem(input, 3, 1, true).
+			AddItem(nil, 0, 1, false)
+
+		frame := tview.NewFrame(flex).
+			SetBorders(1, 1, 1, 1, 0, 0).
+			AddText("╡ Valcord ╞", true, tview.AlignCenter, tview.Styles.PrimaryTextColor).
+			SetBorders(1, 1, 1, 1, 0, 0)
+
+		if err := app.SetRoot(frame, true).Run(); err != nil {
+			panic(err)
+		}
+
+	}
+
+	AppStartup()
+
+}

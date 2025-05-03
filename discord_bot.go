@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -71,8 +74,6 @@ var (
 			},
 		},
 	}
-
-	important_channels = make(map[string]*discordgo.Channel)
 )
 
 func setupComponents() {
@@ -154,6 +155,80 @@ var (
 	discord *discordgo.Session
 )
 
+func NoChannelWithID() {
+
+	settings["current_session_channel"] = ""
+	Types.CheckSettingsData(settings)
+
+	log.Println("No channel with id '" + settings["current_session_channel"] + "' found")
+
+	cleanup()
+	os.Exit(0)
+
+}
+
+func NoServerWithID() {
+
+	settings["server_id"] = ""
+	Types.CheckSettingsData(settings)
+
+	log.Println("Server with id '" + settings["server_id"] + "' (Make sure bot is in server)")
+
+	cleanup()
+	os.Exit(0)
+
+}
+
+func checkChannelID() {
+
+	_, err := discord.Channel(settings["current_session_channel"])
+
+	if err != nil {
+
+		if err.Error() == `HTTP 404 Not Found, {"message": "Unknown Channel", "code": 10003}` {
+
+			NoChannelWithID()
+
+		}
+
+		if err.Error() == `HTTP 404 Not Found, {"message": "404: Not Found", "code": 0}` {
+
+			NoChannelWithID()
+
+		}
+
+		checkError(err)
+
+	}
+
+}
+
+func checkServerID() {
+
+	_, err := discord.Guild(settings["server_id"])
+
+	if err != nil {
+
+		fmt.Println("`" + err.Error() + "`")
+
+		if err.Error() == `HTTP 404 Not Found, {"message": "Unknown Guild", "code": 10004}` {
+
+			NoServerWithID()
+
+		}
+
+		if err.Error() == `HTTP 404 Not Found, {"message": "404: Not Found", "code": 0}` {
+
+			NoServerWithID()
+
+		}
+
+		checkError(err)
+
+	}
+
+}
+
 func discord_setup() {
 
 	discord_bot_data := DISCORD_BOT_DATA{
@@ -167,18 +242,39 @@ func discord_setup() {
 
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 
+		checkServerID()
+		checkChannelID()
+
 		fmt.Println("Discord bot: Ready")
 
-		important_channels["current_session_channel"], err = discord.Channel(settings["current_session_channel"])
+		// Listen for matches to auto-send match data
 
-		if important_channels["current_session_channel"] == nil {
-			fmt.Println("No 'current-session' server selected! Use '/setup_channel channel_type:current_session' in the channel to set!")
-		}
+		Types.ListenForMatch(general_valorant_information.player_info, general_valorant_information.regional_data, Types.Client, time.Second*20, discord)
 
 	})
 
 	err = discord.Open()
-	checkError(err)
+
+	if err != nil {
+
+		if err.Error() == "websocket: close 4004: Authentication failed." {
+
+			// Bot token invalid
+
+			fmt.Println("Bot token provided was invalid..")
+			fmt.Println("Reseting saved bot token")
+
+			settings["discord_api_token"] = ""
+			Types.CheckSettingsData(settings)
+
+			cleanup()
+			os.Exit(0)
+
+		}
+
+		checkError(err)
+
+	}
 
 	setupComponents()
 
