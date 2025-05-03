@@ -163,7 +163,7 @@ func NoChannelWithID() {
 	log.Println("No channel with id '" + settings["current_session_channel"] + "' found")
 
 	cleanup()
-	os.Exit(0)
+	os.Exit(1)
 
 }
 
@@ -175,7 +175,7 @@ func NoServerWithID() {
 	log.Println("Server with id '" + settings["server_id"] + "' (Make sure bot is in server)")
 
 	cleanup()
-	os.Exit(0)
+	os.Exit(1)
 
 }
 
@@ -268,12 +268,25 @@ func discord_setup() {
 			Types.CheckSettingsData(settings)
 
 			cleanup()
-			os.Exit(0)
+			os.Exit(1)
 
 		}
 
 		checkError(err)
 
+	}
+
+	if Flags["Reset"] {
+		fmt.Println("Cleaning up commands..")
+		command_cleanup()
+		cleanup()
+		os.Exit(1)
+	}
+
+	if Flags["Link"] {
+		fmt.Println("Bot Invite Link: '" + "https://discord.com/oauth2/authorize?client_id=" + discord.State.User.ID + "&permissions=93184&integration_type=0&scope=bot'")
+		cleanup()
+		os.Exit(1)
 	}
 
 	setupComponents()
@@ -299,8 +312,6 @@ func discord_setup() {
 
 	allCommands, err := discord.ApplicationCommands(discord.State.User.ID, settings["server_id"])
 	checkError(err)
-
-	//command_cleanup()
 
 	for _, v := range commands {
 
@@ -333,12 +344,15 @@ func discord_setup() {
 
 }
 
-/*func command_cleanup() {
+func command_cleanup() {
 
 	commands, err := discord.ApplicationCommands(discord.State.User.ID, settings["server_id"])
 	checkError(err)
 
 	for _, v := range commands {
+
+		fmt.Println("Cleaning command", v)
+
 		if v == nil {
 			continue
 		}
@@ -346,4 +360,4 @@ func discord_setup() {
 		checkError(err)
 	}
 
-}*/
+}

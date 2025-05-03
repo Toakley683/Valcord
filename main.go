@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -19,6 +21,8 @@ func checkError(err error) {
 
 var (
 	general_valorant_information ValorantInformation
+
+	Flags = map[string]bool{}
 )
 
 type ValorantInformation struct {
@@ -29,6 +33,10 @@ type ValorantInformation struct {
 }
 
 func cleanup() {
+
+	if discord == nil {
+		checkError(errors.New("attempted to clean nil discord instance"))
+	}
 
 	fmt.Println("Cleaning up data for exit..")
 
@@ -77,7 +85,38 @@ func AppStartup() {
 	log.Println("Shutting down..")
 }
 
+func ImmedieteFlags() {
+
+	help := flag.Bool("help", false, "Get command info")
+	reset := flag.Bool("clean-commands", false, "Clean Discord Commands")
+	retrieve_link := flag.Bool("invite", false, "Get invite link for bot")
+
+	flag.Parse()
+
+	Flags["Reset"] = *reset
+	Flags["Link"] = *retrieve_link
+
+	if *help {
+
+		HelpText := ""
+
+		HelpText = HelpText + "Valcord commands: \n"
+		HelpText = HelpText + "./valcord.exe [Command] \n"
+		HelpText = HelpText + "\t--help = [ Prints this help text ] \n"
+		HelpText = HelpText + "\t--clean-commands = [ Cleans all discord commands ] \n"
+		HelpText = HelpText + "\t--invite = [ Generates invite link for bot ] \n"
+
+		fmt.Println(HelpText)
+
+		os.Exit(1)
+
+	}
+
+}
+
 func main() {
+
+	ImmedieteFlags()
 
 	BeginChecks()
 
