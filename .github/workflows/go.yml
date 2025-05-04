@@ -38,8 +38,8 @@ jobs:
     - name: Create GitHub Release and Upload Binary
       uses: softprops/action-gh-release@v2
       with:
-        name: "Release Run ${{ github.run_id }}"
-        tag_name: "release-run-${{ github.run_id }}"
+        name: "vaclord V- ${{ github.sha }}"
+        tag_name: "release-run-${{ github.sha }}"
         files: ./valcord.exe
         draft: false
         prerelease: false
