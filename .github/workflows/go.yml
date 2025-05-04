@@ -34,12 +34,16 @@ jobs:
       with:
         name: Valcord
         path: ./valcord.exe
+      
+    - name: Get Short SHA
+      id: shortsha
+      run: echo "sha_short=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_OUTPUT
 
     - name: Create GitHub Release and Upload Binary
       uses: softprops/action-gh-release@v2
       with:
-        name: "vaclord V- ${{ github.sha }}"
-        tag_name: "release-run-${{ github.sha }}"
+        name: "vaclord V- ${{ steps.shortsha.outputs.sha_short }}"
+        tag_name: "release-run-${{ steps.shortsha.outputs.sha_short }}"
         files: ./valcord.exe
         draft: false
         prerelease: false
