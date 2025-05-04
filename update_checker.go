@@ -148,7 +148,7 @@ func checkUpdates() {
 	fmt.Println("Latest:")
 	fmt.Println("\t" + update_data["name"].(string) + " (" + updatedSHA + ")")
 
-	WaitDelay := time.Second * 10
+	WaitDelay := time.Second * 15
 	Duration := time.Duration(WaitDelay).Seconds()
 
 	fmt.Println("\nWill attempt to run normally in (" + strconv.Itoa(int(Duration)) + ") seconds..")
