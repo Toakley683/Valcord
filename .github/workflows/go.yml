@@ -31,3 +31,14 @@ jobs:
       with:
         name: Valcord
         path: ./valcord.exe
+
+    - name: Create GitHub Release and Upload Binary
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "Release Run ${{ github.run_id }}"
+        tag_name: "release-run-${{ github.run_id }}"
+        files: ./valcord.exe
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
