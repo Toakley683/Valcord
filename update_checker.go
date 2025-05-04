@@ -109,8 +109,9 @@ func checkUpdates() {
 
 		// Test versions have no version
 
+		fmt.Println("SHA: " + versionSHA)
 		fmt.Println("Running in test mode, requires version for release mode..")
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 4)
 
 		return
 
@@ -133,9 +134,12 @@ func checkUpdates() {
 
 		// Version is up to date!
 
+		fmt.Println("SHA: " + versionSHA)
 		fmt.Println("Successful, current version is most up to date")
 
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 2)
+
+		cls.CLS()
 		return
 
 	}
