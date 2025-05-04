@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/MasterDimmy/go-cls"
 )
 
 type EntitlementsTokenResponse struct {
@@ -37,6 +39,8 @@ func GetEntitlementsToken(lockfile Lockfile_type) EntitlementsTokenResponse {
 	if entitlement["errorCode"] != nil {
 
 		if entitlement["message"].(string) == "Invalid URI format" {
+
+			cls.CLS()
 
 			fmt.Println("Riot Client local webserver not open; Please restart riot client.")
 			fmt.Println("Might be open in background, check TaskManager.")
