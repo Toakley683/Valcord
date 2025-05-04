@@ -2,8 +2,12 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -204,11 +208,54 @@ func CheckForChannelID() {
 
 }
 
+type check_lockfile struct {
+	name       string
+	process_id int
+	port       string
+	password   string
+	protocol   string
+}
+
+func getcheck_lockfile() (lock *check_lockfile) {
+
+	userCacheDir, err := os.UserCacheDir()
+	checkError(err)
+
+	dir := userCacheDir + "/Riot Games/Riot Client/Config/lockfile"
+
+	_, err = os.Stat(dir)
+
+	if errors.Is(err, fs.ErrNotExist) {
+		// File doesn't exist
+		return nil
+	}
+	checkError(err)
+
+	file, err := os.ReadFile(dir)
+	checkError(err)
+
+	lockfileContents := (string(file))
+
+	split := strings.Split(lockfileContents, ":")
+
+	convertedPort, err := strconv.Atoi(split[1])
+	checkError(err)
+
+	return &check_lockfile{
+		name:       split[0],
+		process_id: convertedPort,
+		port:       split[2],
+		password:   split[3],
+		protocol:   split[4],
+	}
+
+}
+
 func CheckForOpenGame() {
 
 	// Check for game being open
 
-	RetryDelay := time.Second * 10
+	RetryDelay := time.Millisecond * 7500
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -220,12 +267,20 @@ func CheckForOpenGame() {
 
 	for {
 
-		lockfile := Types.GetLockfile()
+		lockfile := getcheck_lockfile()
 
-		req, err := http.NewRequest("GET", "https://127.0.0.1:"+lockfile.Port+"/entitlements/v1/token", nil)
+		if lockfile == nil {
+			fmt.Println("Client: Closed")
+			fmt.Println("Game is not open, retrying..")
+
+			time.Sleep(RetryDelay)
+			continue
+		}
+
+		req, err := http.NewRequest("GET", "https://127.0.0.1:"+lockfile.port+"/entitlements/v1/token", nil)
 		checkError(err)
 
-		req.Header.Add("Authorization", "Basic "+Types.BasicAuth("riot", lockfile.Password))
+		req.Header.Add("Authorization", "Basic "+Types.BasicAuth("riot", lockfile.password))
 
 		Res, Err := Client.Do(req)
 		res = Res
