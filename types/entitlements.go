@@ -3,6 +3,7 @@ package types
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -38,6 +39,13 @@ func GetEntitlementsToken(lockfile Lockfile_type) EntitlementsTokenResponse {
 		if entitlement["message"].(string) == "Invalid URI format" {
 
 			fmt.Println("Riot Client local webserver not open; Please restart riot client.")
+			fmt.Println("Might be open in background, check TaskManager.")
+
+			fmt.Print("\n")
+
+			log.Fatalln("Invalid URI format")
+
+			return EntitlementsTokenResponse{}
 
 		}
 
