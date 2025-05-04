@@ -134,7 +134,7 @@ func checkUpdates() {
 
 		// Version is up to date!
 
-		fmt.Println("SHA: " + versionSHA)
+		fmt.Println("VersionSHA: " + versionSHA)
 		fmt.Println("Successful, current version is most up to date")
 
 		time.Sleep(time.Second * 2)
