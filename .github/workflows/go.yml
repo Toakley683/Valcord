@@ -1,21 +1,17 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Go
+name: Go Release Build
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  
+    tags:
+      - 'v*'  # Trigger only when a version tag like v1.0.0 is pushed
+
 permissions:
   contents: write
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v4
 
@@ -24,28 +20,17 @@ jobs:
       with:
         go-version: '1.24.2'
 
-    - name: Build
-      run: GOOS=windows GOARCH=amd64 go build -o ./valcord.exe -v .
-
+    - name: Build for Windows
+      run: GOOS=windows GOARCH=amd64 go build -o valcord.exe -v .
+    
     - name: Test
       run: GOOS=windows GOARCH=amd64 go build -o ./valcord.exe -v .
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4.6.2
-      with:
-        name: Valcord
-        path: ./valcord.exe
-      
-    - name: Get Short SHA
-      id: shortsha
-      run: echo "sha_short=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_OUTPUT
 
-    - name: Create GitHub Release and Upload Binary
+    - name: Upload Build Artifact to Release
       uses: softprops/action-gh-release@v2
       with:
-        name: "Valcord V-${{ steps.shortsha.outputs.sha_short }}"
-        tag_name: "valcord-${{ steps.shortsha.outputs.sha_short }}"
+        name: "Valcord V-${{ github.ref_name }}"
+        tag_name: ${{ github.ref_name }}
         files: ./valcord.exe
-        draft: false
-        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
