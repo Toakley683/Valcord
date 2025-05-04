@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -10,6 +9,8 @@ import (
 	"syscall"
 
 	Types "valcord/types"
+
+	"github.com/MasterDimmy/go-cls"
 )
 
 func checkError(err error) {
@@ -34,22 +35,22 @@ type ValorantInformation struct {
 
 func cleanup() {
 
-	if discord == nil {
-		checkError(errors.New("attempted to clean nil discord instance"))
-	}
-
 	fmt.Println("Cleaning up data for exit..")
 
-	fmt.Println("Closing discord bot..")
-	err := discord.Close()
+	if discord != nil {
 
-	if err != nil {
+		fmt.Println("Closing discord bot..")
+		err := discord.Close()
 
-		fmt.Println("Could not disable discord bot: Error(" + err.Error() + ")")
+		if err != nil {
 
-	} else {
+			fmt.Println("Could not disable discord bot: Error(" + err.Error() + ")")
 
-		fmt.Println("Discord bot: Closed")
+		} else {
+
+			fmt.Println("Discord bot: Closed")
+
+		}
 
 	}
 
@@ -100,11 +101,11 @@ func ImmedieteFlags() {
 
 		HelpText := ""
 
-		HelpText = HelpText + "Valcord commands: \n"
-		HelpText = HelpText + "./valcord.exe [Command] \n"
-		HelpText = HelpText + "\t--help = [ Prints this help text ] \n"
-		HelpText = HelpText + "\t--clean-commands = [ Cleans all discord commands ] \n"
-		HelpText = HelpText + "\t--invite = [ Generates invite link for bot ] \n"
+		HelpText = HelpText + "Valcord commands:\n"
+		HelpText = HelpText + "./valcord.exe [Command]\n"
+		HelpText = HelpText + "\t--help = [ Prints this help text ]\n"
+		HelpText = HelpText + "\t--clean-commands = [ Cleans all discord commands ]\n"
+		HelpText = HelpText + "\t--invite = [ Generates invite link for bot ]\n"
 
 		fmt.Println(HelpText)
 
@@ -115,6 +116,8 @@ func ImmedieteFlags() {
 }
 
 func main() {
+
+	cls.CLS()
 
 	ImmedieteFlags()
 

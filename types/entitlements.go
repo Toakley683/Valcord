@@ -1,6 +1,10 @@
 package types
 
-import "net/http"
+import (
+	"errors"
+	"fmt"
+	"net/http"
+)
 
 type EntitlementsTokenResponse struct {
 	accessToken  string
@@ -14,10 +18,10 @@ type EntitlementsTokenResponse struct {
 
 func GetEntitlementsToken(lockfile Lockfile_type) EntitlementsTokenResponse {
 
-	req, err := http.NewRequest("GET", "https://127.0.0.1:"+lockfile.port+"/entitlements/v1/token", nil)
+	req, err := http.NewRequest("GET", "https://127.0.0.1:"+lockfile.Port+"/entitlements/v1/token", nil)
 	checkError(err)
 
-	req.Header.Add("Authorization", "Basic "+basicAuth("riot", lockfile.password))
+	req.Header.Add("Authorization", "Basic "+BasicAuth("riot", lockfile.Password))
 
 	res, err := Client.Do(req)
 	checkError(err)
@@ -28,6 +32,18 @@ func GetEntitlementsToken(lockfile Lockfile_type) EntitlementsTokenResponse {
 
 	entitlement, err = GetJSON(res)
 	checkError(err)
+
+	if entitlement["errorCode"] != nil {
+
+		if entitlement["message"].(string) == "Invalid URI format" {
+
+			fmt.Println("Riot Client local webserver not open; Please restart riot client.")
+
+		}
+
+		checkError(errors.New(entitlement["message"].(string)))
+
+	}
 
 	return EntitlementsTokenResponse{
 		accessToken:  entitlement["accessToken"].(string),

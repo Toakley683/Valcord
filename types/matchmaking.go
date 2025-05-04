@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -207,21 +208,25 @@ func GetCurrentMatchID(player PlayerInfo, regions Regional) string {
 	checkError(err)
 
 	// Use MatchID of current game to get rest of game stats
-	fmt.Println(match_game_player)
-
-	if match_game_player["message"] != nil {
-
-		if match_game_player["errorCode"] == "BAD_CLAIMS" {
-			fmt.Println("Entitlement needs renewed")
-		}
-
-	}
 
 	if match_game_player["MatchID"] == nil {
 		return ""
 	}
 
-	return match_game_player["MatchID"].(string)
+	ReturnedString := match_game_player["MatchID"].(string)
+
+	if match_game_player["errorCode"] != nil {
+
+		if match_game_player["errorCode"] == "BAD_CLAIMS" {
+			fmt.Println("Entitlement needs renewed")
+			return ReturnedString
+		}
+
+		checkError(errors.New(match_game_player["message"].(string)))
+
+	}
+
+	return ReturnedString
 
 }
 

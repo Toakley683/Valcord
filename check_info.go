@@ -1,6 +1,13 @@
 package main
 
 import (
+	"crypto/tls"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/MasterDimmy/go-cls"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 
@@ -167,7 +174,7 @@ func CheckForChannelID() {
 
 				Types.CheckSettingsData(settings)
 
-				AppStartup()
+				CheckForOpenGame()
 
 			}
 
@@ -192,6 +199,68 @@ func CheckForChannelID() {
 		}
 
 	}
+
+	CheckForOpenGame()
+
+}
+
+func CheckForOpenGame() {
+
+	// Check for game being open
+
+	RetryDelay := time.Second * 10
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	Client := http.Client{Transport: tr}
+
+	var res *http.Response
+
+	for {
+
+		lockfile := Types.GetLockfile()
+
+		req, err := http.NewRequest("GET", "https://127.0.0.1:"+lockfile.Port+"/entitlements/v1/token", nil)
+		checkError(err)
+
+		req.Header.Add("Authorization", "Basic "+Types.BasicAuth("riot", lockfile.Password))
+
+		Res, Err := Client.Do(req)
+		res = Res
+
+		if Err != nil {
+
+			splitError := strings.Split(Err.Error(), " ")
+			finalError := strings.Join(splitError[6:], " ")
+
+			if finalError == "No connection could be made because the target machine actively refused it." {
+
+				// Game is not open
+
+				fmt.Println("Client: Closed")
+				fmt.Println("Game is not open, retrying..")
+
+				time.Sleep(RetryDelay)
+				continue
+
+			}
+
+			checkError(Err)
+
+		}
+
+		fmt.Println("Client: Open")
+
+		break
+
+	}
+
+	time.Sleep(time.Second * 1)
+	cls.CLS()
+
+	res.Body.Close()
 
 	AppStartup()
 

@@ -7,11 +7,11 @@ import (
 )
 
 type Lockfile_type struct {
-	name       string
-	process_id int
-	port       string
-	password   string
-	protocol   string
+	Name       string
+	Process_id int
+	Port       string
+	Password   string
+	Protocol   string
 }
 
 // Gets the local Lockfile from "%AppDataLocal%/Riot Games/Riot Client/Config/lockfile" -> Required for access token
@@ -34,11 +34,11 @@ func GetLockfile() (lock Lockfile_type) {
 	checkError(err)
 
 	return Lockfile_type{
-		name:       split[0],
-		process_id: convertedPort,
-		port:       split[2],
-		password:   split[3],
-		protocol:   split[4],
+		Name:       split[0],
+		Process_id: convertedPort,
+		Port:       split[2],
+		Password:   split[3],
+		Protocol:   split[4],
 	}
 
 }

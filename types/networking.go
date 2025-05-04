@@ -17,7 +17,7 @@ func checkError(err error) {
 
 }
 
-func basicAuth(username, password string) string {
+func BasicAuth(username, password string) string {
 	auth := username + ":" + password
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }

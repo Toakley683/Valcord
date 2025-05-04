@@ -6,6 +6,8 @@ require github.com/goccy/go-yaml v1.17.1
 
 require github.com/lynn9388/supsub v0.0.0-20210304091550-458423b0e16a
 
+require github.com/MasterDimmy/go-cls v0.0.1
+
 require (
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/gdamore/tcell/v2 v2.7.1
