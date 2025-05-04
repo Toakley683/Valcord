@@ -57,6 +57,15 @@ func checkUpdates() {
 
 	cls.CLS()
 
+	if update_data["status"] != nil {
+
+		fmt.Println("Couldn't find any versions")
+
+		time.Sleep(time.Second)
+		return
+
+	}
+
 	if update_data["tag_name"] == versionSHA {
 
 		// Version is up to date!
@@ -81,7 +90,9 @@ func checkUpdates() {
 
 	fmt.Println("\nWill attempt to run normally in (" + strconv.Itoa(int(Duration)) + ") seconds..")
 
-	fmt.Println("\nYou can find the newest version at 'https://github.com/Toakley683/Valcord/releases/latest'\n")
+	fmt.Println("\nYou can find the newest version at 'https://github.com/Toakley683/Valcord/releases/latest'")
+
+	fmt.Print("\n")
 
 	time.Sleep(WaitDelay)
 
