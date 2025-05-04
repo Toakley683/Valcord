@@ -153,7 +153,7 @@ func GetCurrentAgentSelectID(player PlayerInfo, regions Regional) string {
 
 	// Get MatchID of agent select
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/pregame/v1/players/"+player.puuid, nil)
 	checkError(err)
@@ -187,7 +187,7 @@ func GetCurrentMatchID(player PlayerInfo, regions Regional) string {
 
 	// Get MatchID of current game
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/core-game/v1/players/"+player.puuid, nil)
 	checkError(err)
@@ -317,7 +317,7 @@ func GetAgentSelectInfo(player PlayerInfo, regions Regional) CurrentAgentSelect 
 		return CurrentAgentSelect{}
 	}
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/pregame/v1/matches/"+MatchID, nil)
 	checkError(err)
@@ -446,7 +446,7 @@ func GetCurrentMatchInfo(player PlayerInfo, regions Regional) CurrentGameMatch {
 		return CurrentGameMatch{}
 	}
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/core-game/v1/matches/"+MatchID, nil)
 	checkError(err)
@@ -576,7 +576,7 @@ func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, regi
 	body := bytes.NewBuffer(json_data)
 	checkError(err)
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("PUT", "https://pd."+regions.shard+".a.pvp.net/name-service/v2/players", body)
 	checkError(err)
@@ -759,7 +759,7 @@ func getPlayerNames(PlayerIDS []string, player PlayerInfo, regions Regional) map
 	body := bytes.NewBuffer(json_data)
 	checkError(err)
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("PUT", "https://pd."+regions.shard+".a.pvp.net/name-service/v2/players", body)
 	checkError(err)
@@ -1396,7 +1396,7 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 			},
 		})
 
-		entitlement := GetEntitlementsToken(GetLockfile())
+		entitlement := GetEntitlementsToken(GetLockfile(true))
 
 		req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/quit", nil)
 		checkError(err)
@@ -1464,7 +1464,7 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 			},
 		})
 
-		entitlement := GetEntitlementsToken(GetLockfile())
+		entitlement := GetEntitlementsToken(GetLockfile(true))
 
 		req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/select/"+FinalAgentList[AgentIndex].UUID, nil)
 		checkError(err)

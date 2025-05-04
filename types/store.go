@@ -305,7 +305,7 @@ func RequestStoreFront(player PlayerInfo, regional Regional) map[string]interfac
 
 	payload := strings.NewReader("{}")
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("POST", "https://pd."+regional.shard+".a.pvp.net/store/v3/storefront/"+player.puuid, payload)
 	checkError(err)

@@ -88,7 +88,7 @@ func GetOldMatchPlayerDetails(MatchID string, PUUID string, regions Regional, pl
 
 	//https://pd.{Shard}.a.pvp.net/match-details/v1/matches/{MatchID}
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/match-details/v1/matches/"+MatchID, nil)
 	checkError(err)
@@ -154,7 +154,7 @@ func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, p
 
 	// https://pd.{Shard}.a.pvp.net/match-history/v1/history/{Subject/PUUID}?startIndex={StartIndex}&endIndex={EndIndex}
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/match-history/v1/history/"+UUID+"?startIndex="+StartString+"&endIndex="+EndString, nil)
 	checkError(err)
@@ -380,7 +380,7 @@ func GetPlayerMMR(regions *Regional, player *PlayerInfo, PlayerUUID string, Retu
 
 	//"https://pd." + regions.shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/mmr/v1/players/"+PlayerUUID, nil)
 	checkError(err)

@@ -66,7 +66,7 @@ func AppStartup() {
 	// Add listener for when Valorant is (Calling 127.0.0.1:{LockfilePort} )
 
 	Types.Init_val_details()
-	lockfile := Types.GetLockfile()
+	lockfile := Types.GetLockfile(true)
 	entitlements := Types.GetEntitlementsToken(lockfile)
 	player_info := Types.GetPlayerInfo()
 	region_data := Types.GetRegionData()

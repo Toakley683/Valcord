@@ -1,6 +1,8 @@
 package types
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"strconv"
 	"strings"
@@ -16,12 +18,25 @@ type Lockfile_type struct {
 
 // Gets the local Lockfile from "%AppDataLocal%/Riot Games/Riot Client/Config/lockfile" -> Required for access token
 
-func GetLockfile() (lock Lockfile_type) {
+func GetLockfile(doError bool) (lock Lockfile_type) {
 
 	userCacheDir, err := os.UserCacheDir()
 	checkError(err)
 
 	dir := userCacheDir + "/Riot Games/Riot Client/Config/lockfile"
+
+	_, err = os.Stat(dir)
+
+	if errors.Is(err, fs.ErrNotExist) {
+		// File doesn't exist
+
+		if doError {
+			checkError(errors.New("no lockfile detected, game is closed"))
+		}
+
+		return Lockfile_type{}
+	}
+	checkError(err)
 
 	file, err := os.ReadFile(dir)
 	checkError(err)

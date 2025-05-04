@@ -59,7 +59,7 @@ type PlayerInfo struct {
 
 func GetPlayerInfo() PlayerInfo {
 
-	entitlement := GetEntitlementsToken(GetLockfile())
+	entitlement := GetEntitlementsToken(GetLockfile(true))
 
 	req, err := http.NewRequest("GET", "https://auth.riotgames.com/userinfo", nil)
 	checkError(err)
