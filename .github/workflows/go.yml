@@ -26,11 +26,15 @@ jobs:
     - name: Test
       run: GOOS=windows GOARCH=amd64 go build -o ./valcord.exe -v .
 
+    - name: Get Short SHA
+      id: shortsha
+      run: echo "sha_short=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_OUTPUT
+
     - name: Upload Build Artifact to Release
       uses: softprops/action-gh-release@v2
       with:
         name: "Valcord ${{ github.ref_name }}"
-        tag_name: ${{ github.ref_name }}
+        tag_name: ${{ steps.shortsha.outputs.sha_short }}
         files: ./valcord.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
