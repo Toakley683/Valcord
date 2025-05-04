@@ -119,6 +119,8 @@ func main() {
 
 	cls.CLS()
 
+	checkUpdates()
+
 	ImmedieteFlags()
 
 	BeginChecks()
