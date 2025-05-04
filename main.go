@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	Types "valcord/types"
-
 	"github.com/MasterDimmy/go-cls"
+
+	Types "valcord/types"
 )
 
 func checkError(err error) {
