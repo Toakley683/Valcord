@@ -3,7 +3,7 @@ name: Go Release Build
 on:
   push:
     tags:
-      - 'v*'  # Trigger only when a version tag like v1.0.0 is pushed
+      - 'v*'
 
 permissions:
   contents: write
