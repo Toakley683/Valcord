@@ -104,7 +104,7 @@ func GetPlayerInfo() PlayerInfo {
 	if player_info["original_account_id"] == nil {
 		original_account_id = ""
 	} else {
-		original_account_id = player_info["original_account_id"].(string)
+		original_account_id = player_info["original_account_id"].(float64)
 	}
 
 	var original_platform_id interface{}

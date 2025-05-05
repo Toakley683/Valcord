@@ -113,6 +113,8 @@ func checkUpdates() {
 		fmt.Println("Running in test mode, requires version for release mode..")
 		time.Sleep(time.Second * 4)
 
+		cls.CLS()
+
 		return
 
 	}

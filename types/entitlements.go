@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/MasterDimmy/go-cls"
 )
@@ -27,7 +28,24 @@ func GetEntitlementsToken(lockfile Lockfile_type) EntitlementsTokenResponse {
 	req.Header.Add("Authorization", "Basic "+BasicAuth("riot", lockfile.Password))
 
 	res, err := Client.Do(req)
-	checkError(err)
+
+	if err != nil {
+
+		splitError := strings.Split(err.Error(), " ")
+		finalError := strings.Join(splitError[6:], " ")
+
+		if finalError == "No connection could be made because the target machine actively refused it." {
+
+			// Client has been closed
+			// Go back to listening for match
+
+			log.Fatalln("Client has been closed, stopping\n ")
+
+		}
+
+		checkError(err)
+
+	}
 
 	defer res.Body.Close()
 

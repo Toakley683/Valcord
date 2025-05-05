@@ -81,9 +81,11 @@ func AppStartup() {
 	discord_setup()
 
 	log.Println("Press Ctrl+C to exit")
+
 	<-stop
 
 	log.Println("Shutting down..")
+
 }
 
 func ImmedieteFlags() {
