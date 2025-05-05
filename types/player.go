@@ -3,6 +3,8 @@ package types
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -43,7 +45,6 @@ type PlayerInfo struct {
 	country_at            float64
 	email_verified        bool
 	jti                   string
-	original_account_id   string
 	original_platform_id  string
 	phone_number_verified bool
 	player_locale         string
@@ -73,6 +74,11 @@ func GetPlayerInfo() PlayerInfo {
 
 	var player_info map[string]interface{}
 
+	if player_info == nil {
+		fmt.Println(player_info)
+		checkError(errors.New("Player Info not found"))
+	}
+
 	player_info, err = GetJSON(res)
 	checkError(err)
 
@@ -97,14 +103,6 @@ func GetPlayerInfo() PlayerInfo {
 		cng_at:     PwMap["cng_at"].(float64),
 		reset:      PwMap["reset"].(bool),
 		must_reset: PwMap["must_reset"].(bool),
-	}
-
-	var original_account_id interface{}
-
-	if player_info["original_account_id"] == nil {
-		original_account_id = ""
-	} else {
-		original_account_id = player_info["original_account_id"].(float64)
 	}
 
 	var original_platform_id interface{}
@@ -160,7 +158,6 @@ func GetPlayerInfo() PlayerInfo {
 		country_at:            player_info["country_at"].(float64),
 		email_verified:        player_info["email_verified"].(bool),
 		jti:                   player_info["jti"].(string),
-		original_account_id:   original_account_id.(string),
 		original_platform_id:  original_platform_id.(string),
 		phone_number_verified: player_info["phone_number_verified"].(bool),
 		player_locale:         player_info["player_locale"].(string),
