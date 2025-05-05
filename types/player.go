@@ -74,13 +74,13 @@ func GetPlayerInfo() PlayerInfo {
 
 	var player_info map[string]interface{}
 
-	if player_info == nil {
-		fmt.Println(player_info)
-		checkError(errors.New("Player Info not found"))
-	}
-
 	player_info, err = GetJSON(res)
 	checkError(err)
+
+	if player_info == nil {
+		fmt.Println(player_info)
+		checkError(errors.New("player Info not found"))
+	}
 
 	ACCTInfoMap := player_info["acct"].(map[string]interface{})
 	BansMap := player_info["ban"].(map[string]interface{})
