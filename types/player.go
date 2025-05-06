@@ -62,8 +62,6 @@ func GetPlayerInfo() PlayerInfo {
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	fmt.Println(entitlement)
-
 	req, err := http.NewRequest("GET", "https://auth.riotgames.com/userinfo", nil)
 	checkError(err)
 
