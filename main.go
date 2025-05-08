@@ -84,6 +84,8 @@ func AppStartup() {
 
 	<-stop
 
+	cls.CLS()
+
 	log.Println("Shutting down..")
 
 }

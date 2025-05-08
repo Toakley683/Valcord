@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
+	"github.com/MasterDimmy/go-cls"
 	"github.com/bwmarrin/discordgo"
 
 	Types "valcord/types"
@@ -157,22 +157,15 @@ var (
 
 func NoChannelWithID() {
 
+	cls.CLS()
+
+	fmt.Println("No channel with id '" + settings["current_session_channel"] + "' found\n")
+
+	fmt.Println("Ensure channel exists")
+	fmt.Println("Ensure ChannelID is correct (Will be automatically reset for this purpose)\n ")
+
 	settings["current_session_channel"] = ""
 	Types.CheckSettingsData(settings)
-
-	log.Println("No channel with id '" + settings["current_session_channel"] + "' found")
-
-	cleanup()
-	os.Exit(1)
-
-}
-
-func NoServerWithID() {
-
-	settings["server_id"] = ""
-	Types.CheckSettingsData(settings)
-
-	log.Println("Server with id '" + settings["server_id"] + "' (Make sure bot is in server)")
 
 	cleanup()
 	os.Exit(1)
@@ -197,13 +190,35 @@ func checkChannelID() {
 
 		}
 
+		settings["current_session_channel"] = ""
+		Types.CheckSettingsData(settings)
+
 		checkError(err)
 
 	}
 
 }
 
-func checkServerID() {
+func serverInaccessable(inviteLink string) {
+
+	cls.CLS()
+
+	fmt.Println("Bot is not in server with id '" + settings["server_id"] + "'")
+	fmt.Println("Make sure to invite the bot into a server!\n ")
+
+	fmt.Println("Bot Invite Link: '" + inviteLink + "'\n")
+
+	fmt.Println("Saved ServerID will be reset incase of error\n ")
+
+	settings["server_id"] = ""
+	Types.CheckSettingsData(settings)
+
+	cleanup()
+	os.Exit(1)
+
+}
+
+func checkServerID(inviteLink string) {
 
 	_, err := discord.Guild(settings["server_id"])
 
@@ -213,15 +228,18 @@ func checkServerID() {
 
 		if err.Error() == `HTTP 404 Not Found, {"message": "Unknown Guild", "code": 10004}` {
 
-			NoServerWithID()
+			serverInaccessable(inviteLink)
 
 		}
 
 		if err.Error() == `HTTP 404 Not Found, {"message": "404: Not Found", "code": 0}` {
 
-			NoServerWithID()
+			serverInaccessable(inviteLink)
 
 		}
+
+		settings["server_id"] = ""
+		Types.CheckSettingsData(settings)
 
 		checkError(err)
 
@@ -242,9 +260,6 @@ func discord_setup() {
 
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 
-		checkServerID()
-		checkChannelID()
-
 		fmt.Println("Discord bot: Ready")
 
 		// Listen for matches to auto-send match data
@@ -254,6 +269,11 @@ func discord_setup() {
 	})
 
 	err = discord.Open()
+
+	InviteLink := "https://discord.com/oauth2/authorize?client_id=" + discord.State.User.ID + "&permissions=93184&integration_type=0&scope=bot'"
+
+	checkServerID(InviteLink)
+	checkChannelID()
 
 	if err != nil {
 
