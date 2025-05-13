@@ -11,8 +11,9 @@ import (
 var (
 	config_dir, _      = os.UserConfigDir()
 	directory_name     = "Valcord"
-	settings_directory = config_dir + "/" + directory_name
-	settings_file      = settings_directory + "/settings.yaml"
+	Settings_directory = config_dir + "\\" + directory_name
+	Logs_directory     = Settings_directory + "\\logs"
+	Settings_file      = Settings_directory + "\\settings.yaml"
 )
 
 func CheckSettingsData(settings map[string]string) map[string]string {
@@ -36,7 +37,7 @@ func CheckSettingsData(settings map[string]string) map[string]string {
 	data, err := yaml.Marshal(settings)
 	checkError(err)
 
-	err = os.WriteFile(settings_file, data, 0700)
+	err = os.WriteFile(Settings_file, data, 0700)
 	checkError(err)
 
 	return settings
@@ -45,11 +46,11 @@ func CheckSettingsData(settings map[string]string) map[string]string {
 
 func check_settings_file() map[string]string {
 
-	// Check if Directory exists, if not create it
+	// Check if File exists, if not create it
 
 	settings_data := get_default_settings()
 
-	_, err := os.Stat(settings_file)
+	_, err := os.Stat(Settings_file)
 
 	if errors.Is(err, fs.ErrNotExist) {
 
@@ -58,7 +59,7 @@ func check_settings_file() map[string]string {
 		data, err := yaml.Marshal(settings_data)
 		checkError(err)
 
-		err = os.WriteFile(settings_file, data, 0700)
+		err = os.WriteFile(Settings_file, data, 0700)
 		checkError(err)
 
 		check_settings_file()
@@ -72,7 +73,7 @@ func check_settings_file() map[string]string {
 
 		// File exists, read file and output settings
 
-		data, err := os.ReadFile(settings_file)
+		data, err := os.ReadFile(Settings_file)
 		checkError(err)
 
 		var settings map[string]string
@@ -92,12 +93,12 @@ func check_directory() map[string]string {
 
 	// Check if Directory exists, if not create it
 
-	_, err := os.Stat(settings_directory)
+	_, err := os.Stat(Settings_directory)
 
 	if errors.Is(err, fs.ErrNotExist) {
 		// File doesn't exist
 
-		err := os.Mkdir(settings_directory, 0700)
+		err := os.Mkdir(Settings_directory, 0700)
 		checkError(err)
 
 		check_directory()

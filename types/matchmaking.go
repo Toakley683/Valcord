@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -218,7 +217,7 @@ func GetCurrentMatchID(player PlayerInfo, regions Regional) string {
 	if match_game_player["errorCode"] != nil {
 
 		if match_game_player["errorCode"] == "BAD_CLAIMS" {
-			fmt.Println("Entitlement needs renewed")
+			NewLog("Entitlement needs renewed")
 			return ReturnedString
 		}
 
@@ -247,7 +246,7 @@ func CheckForMatch(player PlayerInfo, regions Regional, client http.Client, last
 
 	// Should call whenever we go into a new match
 
-	fmt.Println("New match found: '" + matchID + "'")
+	NewLog("New match found: '" + matchID + "'")
 
 	Request_match(player, regions, Settings["current_session_channel"], discord)
 
@@ -272,7 +271,7 @@ func CheckForAgentSelect(player PlayerInfo, regions Regional, client http.Client
 
 	// Should call whenever we go into a new match
 
-	fmt.Println("New agent select found: '" + agentSelectID + "'")
+	NewLog("New agent select found: '" + agentSelectID + "'")
 
 	Request_agentSelect(player, regions, Settings["current_session_channel"], discord)
 
@@ -291,8 +290,8 @@ func ListenForMatch(player PlayerInfo, regions Regional, client http.Client, che
 
 		for {
 
-			fmt.Println("Checking match status..")
-			fmt.Println("MatchID: " + lastMatchID)
+			NewLog("Checking match status..")
+			NewLog("MatchID: " + lastMatchID)
 
 			lastAgentSelectID = CheckForAgentSelect(player, regions, client, lastAgentSelectID, discord)
 			lastMatchID = CheckForMatch(player, regions, client, lastMatchID, discord)
@@ -313,7 +312,7 @@ func GetAgentSelectInfo(player PlayerInfo, regions Regional) CurrentAgentSelect 
 
 	if MatchID == "" {
 		// Not in agent select
-		fmt.Println("Not currently in agent select")
+		NewLog("Not currently in agent select")
 		return CurrentAgentSelect{}
 	}
 
@@ -344,7 +343,7 @@ func GetAgentSelectInfo(player PlayerInfo, regions Regional) CurrentAgentSelect 
 		if agent_select_information[team_name] == nil {
 			// 'X' team does not exist (Likely custom game with only 1 team)
 			// Create a team of empty players for data structure
-			fmt.Println("No team '" + team_name + "'")
+			NewLog("No team '" + team_name + "'")
 
 			team_data[team_name] = CurrentAgentSelectTeam{
 				TeamID:  "",
@@ -442,7 +441,7 @@ func GetCurrentMatchInfo(player PlayerInfo, regions Regional) CurrentGameMatch {
 	var MatchID string = GetCurrentMatchID(player, regions)
 
 	if MatchID == "" {
-		fmt.Println("Not currently in match")
+		NewLog("Not currently in match")
 		return CurrentGameMatch{}
 	}
 
@@ -856,7 +855,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, regions Regional) 
 
 			AllyTeam[len(AllyTeam)] = P
 
-			//fmt.Println(len(AllyTeamNames))
+			//NewLog(len(AllyTeamNames))
 		} else {
 			isEnemy = true
 		}
@@ -868,7 +867,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, regions Regional) 
 
 			EnemyTeam[len(EnemyTeam)] = P
 
-			//fmt.Println(len(EnemyTeamNames))
+			//NewLog(len(EnemyTeamNames))
 		}
 	}
 
@@ -959,7 +958,7 @@ func newMatchEmbed(match CurrentGameMatch, player PlayerInfo, regions Regional) 
 
 func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, playerInfo *PlayerInfo, matchmakingData *MatchmakingData) *discordgo.MessageEmbed {
 
-	fmt.Println("Loading: " + P.GameName)
+	NewLog("Loading: " + P.GameName)
 
 	IncludedGamemodes := map[string]bool{
 		"competitive": true,
@@ -975,7 +974,7 @@ func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, playerInf
 
 	agent := AgentDetails[strings.ToLower(P.CharacterID)]
 
-	fmt.Println(RankDetails[mmr.PeakRank].TierName)
+	NewLog(RankDetails[mmr.PeakRank].TierName)
 
 	CurrentGameMMR := mmr.Competitive
 
@@ -1033,7 +1032,7 @@ func matchEmbedFromPlayer(P *EmbedInput, color int, regions *Regional, playerInf
 		P.GameName = "undefined"
 	}
 
-	fmt.Println("Rank icon: " + RankDetails[mmr.CurrentRank].RankIcon)
+	NewLog("Rank icon: " + RankDetails[mmr.CurrentRank].RankIcon)
 
 	return &discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
@@ -1058,14 +1057,14 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 	PlayerID := P.Subject
 
 	if PlayerID == "" {
-		fmt.Println("No player ID given for profile")
+		NewLog("No player ID given for profile")
 		return &discordgo.WebhookParams{}
 	}
 
 	mmr := GetPlayerMMR(&regions, &player, P.Subject, map[string]bool{})
 	ornament := GetOrnamentsFromPlayer(P.PlayerIdentity)
 
-	fmt.Println("Selected: " + P.GameName + " " + supsub.ToSup(P.TagLine))
+	NewLog("Selected: " + P.GameName + " " + supsub.ToSup(P.TagLine))
 
 	embedCount := 4
 
@@ -1230,7 +1229,7 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 		Color:       int(Color),
 	}
 
-	fmt.Println("Profile: Obtained")
+	NewLog("Profile: Obtained")
 
 	return &discordgo.WebhookParams{
 		Embeds: Embeds,
@@ -1240,7 +1239,7 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 
 func Request_match(player_info PlayerInfo, regional Regional, ChannelID string, discord *discordgo.Session) {
 
-	fmt.Println("Requested Match")
+	NewLog("Requested Match")
 
 	MatchInfo := GetCurrentMatchInfo(player_info, regional)
 
@@ -1309,7 +1308,7 @@ func Request_match(player_info PlayerInfo, regional Regional, ChannelID string, 
 
 func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID string, discord *discordgo.Session) {
 
-	fmt.Println("Requested Agent Select")
+	NewLog("Requested Agent Select")
 
 	AgentSelect := GetAgentSelectInfo(player_info, regional)
 
@@ -1349,7 +1348,7 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 
 		PlayerID := i.MessageComponentData().Values[0]
 
-		fmt.Println("ID: " + PlayerID)
+		NewLog("ID: " + PlayerID)
 
 		var P CurrentAgentSelectPlayer
 
@@ -1436,7 +1435,7 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 
 		FinalAgentList := make([]PlayableAgent, len(Agents)-len(CurrentlyPlayedAgents)+1)
 
-		fmt.Println("Total: " + strconv.Itoa(len(Agents)-len(CurrentlyPlayedAgents)))
+		NewLog("Total: " + strconv.Itoa(len(Agents)-len(CurrentlyPlayedAgents)))
 
 		AgentLoopI := 0
 
@@ -1451,8 +1450,8 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 
 		}
 
-		fmt.Println("Requesting random agent..")
-		fmt.Println("Playable Agent count: " + strconv.Itoa(len(FinalAgentList)))
+		NewLog("Requesting random agent..")
+		NewLog("Playable Agent count: " + strconv.Itoa(len(FinalAgentList)))
 
 		AgentIndex := rand.Intn(len(FinalAgentList) - 1)
 

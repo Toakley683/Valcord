@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -223,8 +222,8 @@ func CheckForOpenGame() {
 		lockfile := Types.GetLockfile(false)
 
 		if lockfile.Port == "" {
-			fmt.Println("Client: Closed")
-			fmt.Println("Game is not open, retrying..")
+			Types.NewLog("Client: Closed")
+			Types.NewLog("Game is not open, retrying..")
 
 			time.Sleep(RetryDelay)
 			continue
@@ -247,8 +246,8 @@ func CheckForOpenGame() {
 
 				// Game is not open
 
-				fmt.Println("Client: Closed")
-				fmt.Println("Game is not open, retrying..")
+				Types.NewLog("Client: Closed")
+				Types.NewLog("Game is not open, retrying..")
 
 				time.Sleep(RetryDelay)
 				continue
@@ -259,7 +258,7 @@ func CheckForOpenGame() {
 
 		}
 
-		fmt.Println("Client: Open")
+		Types.NewLog("Client: Open")
 
 		break
 
@@ -270,6 +269,6 @@ func CheckForOpenGame() {
 
 	res.Body.Close()
 
-	AppStartup()
+	AppInit()
 
 }

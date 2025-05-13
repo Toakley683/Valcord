@@ -60,8 +60,8 @@ func GetEntitlementsToken(lockfile Lockfile_type) EntitlementsTokenResponse {
 
 			cls.CLS()
 
-			fmt.Println("Riot Client local webserver not open; Please restart riot client.")
-			fmt.Println("Might be open in background, check TaskManager.")
+			NewLog("Riot Client local webserver not open; Please restart riot client.")
+			NewLog("Might be open in background, check TaskManager.")
 
 			fmt.Print("\n")
 

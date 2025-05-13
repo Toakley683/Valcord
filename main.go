@@ -1,14 +1,18 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
-	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
 	"github.com/MasterDimmy/go-cls"
+	"github.com/getlantern/systray"
 
 	Types "valcord/types"
 )
@@ -17,13 +21,14 @@ func checkError(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 var (
 	general_valorant_information ValorantInformation
 
 	Flags = map[string]bool{}
+
+	menuStatus = &systray.MenuItem{}
 )
 
 type ValorantInformation struct {
@@ -35,35 +40,48 @@ type ValorantInformation struct {
 
 func cleanup() {
 
-	fmt.Println("Cleaning up data for exit..")
+	Types.NewLog("Cleaning up data for exit..")
 
 	if discord != nil {
 
-		fmt.Println("Closing discord bot..")
+		Types.NewLog("Closing discord bot..")
 		err := discord.Close()
 
 		if err != nil {
 
-			fmt.Println("Could not disable discord bot: Error(" + err.Error() + ")")
+			Types.NewLog("Could not disable discord bot: Error(" + err.Error() + ")")
 
 		} else {
 
-			fmt.Println("Discord bot: Closed")
+			Types.NewLog("Discord bot: Closed")
 
 		}
 
 	}
 
+	Types.NewLog("Cleaning up Log File..")
+
+	if Types.LogFile != nil {
+
+		Types.NewLog("Log file: Closed")
+
+		Types.LogFile.Close()
+
+	}
+
 }
 
-func AppStartup() {
+func AppShutdown() {
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
+	cleanup()
 
-	defer cleanup()
+	cls.CLS()
 
-	// Add listener for when Valorant is (Calling 127.0.0.1:{LockfilePort} )
+	Types.NewLog("Shutting down..")
+
+}
+
+func AppInit() {
 
 	Types.Init_val_details()
 	lockfile := Types.GetLockfile(true)
@@ -78,15 +96,13 @@ func AppStartup() {
 		regional_data: region_data,
 	}
 
+	menuStatus.Check()
+	menuStatus.SetTitle("Status: Activated")
+	menuStatus.SetTooltip("Application is now active!")
+
 	discord_setup()
 
-	log.Println("Press Ctrl+C to exit")
-
-	<-stop
-
-	cls.CLS()
-
-	log.Println("Shutting down..")
+	Types.NewLog("Press Ctrl+C to exit")
 
 }
 
@@ -111,7 +127,7 @@ func ImmedieteFlags() {
 		HelpText = HelpText + "\t--clean-commands = [ Cleans all discord commands ]\n"
 		HelpText = HelpText + "\t--invite = [ Generates invite link for bot ]\n"
 
-		fmt.Println(HelpText)
+		Types.NewLog(HelpText)
 
 		os.Exit(1)
 
@@ -119,14 +135,100 @@ func ImmedieteFlags() {
 
 }
 
-func main() {
+func GetIconData(Client http.Client, url string) []byte {
 
-	cls.CLS()
+	req, err := http.NewRequest("GET", url, nil)
+	checkError(err)
+
+	res, err := Client.Do(req)
+	checkError(err)
+
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	checkError(err)
+
+	return data
+
+}
+
+func LoadIcons() map[string][]byte {
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	Client := http.Client{Transport: tr}
+
+	export := map[string][]byte{}
+
+	export["logo"] = GetIconData(Client, "https://raw.githubusercontent.com/Toakley683/Valcord/refs/heads/main/icons/valcord_logo.ico")
+
+	return export
+
+}
+
+func AppStartup() {
+
+	menuStatus.SetTitle("Status: Loading..")
+	menuStatus.SetTooltip("Loading the application..")
 
 	checkUpdates()
 
 	ImmedieteFlags()
 
 	BeginChecks()
+}
+
+func SystraySetup() {
+
+	Icons := LoadIcons()
+
+	systray.SetTitle("Valcord")
+	systray.SetTooltip("Valcord")
+
+	systray.SetIcon(Icons["logo"])
+
+	menuStatus = systray.AddMenuItemCheckbox("Deactivated", "", false)
+	menuStatus.SetTooltip("Application is not active")
+
+	systray.AddSeparator()
+
+	menuConfig := systray.AddMenuItem("Config", "Opens the config directory")
+
+	go func() {
+
+		for {
+
+			select {
+			case <-menuConfig.ClickedCh:
+				cmd := exec.Command(`explorer`, Types.Settings_directory)
+				cmd.Run()
+			}
+		}
+
+	}()
+
+	systray.AddSeparator()
+	menuQuit := systray.AddMenuItem("Quit", "Quits application")
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
+
+	cls.CLS()
+
+	AppStartup()
+
+	select {
+	case <-menuQuit.ClickedCh:
+		systray.Quit()
+	case <-stop:
+		systray.Quit()
+	}
+}
+
+func main() {
+
+	systray.Run(SystraySetup, AppShutdown)
 
 }

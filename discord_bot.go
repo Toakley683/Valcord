@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -86,7 +85,7 @@ func setupComponents() {
 
 		Types.CheckSettingsData(settings)
 
-		fmt.Println("Channel (" + i.ChannelID + ") has now been designated '" + value.(string) + "'")
+		Types.NewLog("Channel (" + i.ChannelID + ") has now been designated '" + value.(string) + "'")
 
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -129,7 +128,7 @@ func setupComponents() {
 
 	Types.CommandHandlers["request_shop"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
-		fmt.Println("Shop has been requested")
+		Types.NewLog("Shop has been requested")
 
 		Type := i.ApplicationCommandData().Options[0].Value.(string)
 
@@ -159,10 +158,10 @@ func NoChannelWithID() {
 
 	cls.CLS()
 
-	fmt.Println("No channel with id '" + settings["current_session_channel"] + "' found\n")
+	Types.NewLog("No channel with id '" + settings["current_session_channel"] + "' found\n")
 
-	fmt.Println("Ensure channel exists")
-	fmt.Println("Ensure ChannelID is correct (Will be automatically reset for this purpose)\n ")
+	Types.NewLog("Ensure channel exists")
+	Types.NewLog("Ensure ChannelID is correct (Will be automatically reset for this purpose)\n ")
 
 	settings["current_session_channel"] = ""
 	Types.CheckSettingsData(settings)
@@ -203,12 +202,12 @@ func serverInaccessable(inviteLink string) {
 
 	cls.CLS()
 
-	fmt.Println("Bot is not in server with id '" + settings["server_id"] + "'")
-	fmt.Println("Make sure to invite the bot into a server!\n ")
+	Types.NewLog("Bot is not in server with id '" + settings["server_id"] + "'")
+	Types.NewLog("Make sure to invite the bot into a server!\n ")
 
-	fmt.Println("Bot Invite Link: '" + inviteLink + "'\n")
+	Types.NewLog("Bot Invite Link: '" + inviteLink + "'\n")
 
-	fmt.Println("Saved ServerID will be reset incase of error\n ")
+	Types.NewLog("Saved ServerID will be reset incase of error\n ")
 
 	settings["server_id"] = ""
 	Types.CheckSettingsData(settings)
@@ -224,7 +223,7 @@ func checkServerID(inviteLink string) {
 
 	if err != nil {
 
-		fmt.Println("`" + err.Error() + "`")
+		Types.NewLog("`" + err.Error() + "`")
 
 		if err.Error() == `HTTP 404 Not Found, {"message": "Unknown Guild", "code": 10004}` {
 
@@ -260,7 +259,7 @@ func discord_setup() {
 
 	discord.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 
-		fmt.Println("Discord bot: Ready")
+		Types.NewLog("Discord bot: Ready")
 
 		// Listen for matches to auto-send match data
 
@@ -281,8 +280,8 @@ func discord_setup() {
 
 			// Bot token invalid
 
-			fmt.Println("Bot token provided was invalid..")
-			fmt.Println("Reseting saved bot token")
+			Types.NewLog("Bot token provided was invalid..")
+			Types.NewLog("Reseting saved bot token")
 
 			settings["discord_api_token"] = ""
 			Types.CheckSettingsData(settings)
@@ -297,14 +296,14 @@ func discord_setup() {
 	}
 
 	if Flags["Reset"] {
-		fmt.Println("Cleaning up commands..")
+		Types.NewLog("Cleaning up commands..")
 		command_cleanup()
 		cleanup()
 		os.Exit(1)
 	}
 
 	if Flags["Link"] {
-		fmt.Println("Bot Invite Link: '" + "https://discord.com/oauth2/authorize?client_id=" + discord.State.User.ID + "&permissions=93184&integration_type=0&scope=bot'")
+		Types.NewLog("Bot Invite Link: '" + "https://discord.com/oauth2/authorize?client_id=" + discord.State.User.ID + "&permissions=93184&integration_type=0&scope=bot'")
 		cleanup()
 		os.Exit(1)
 	}
@@ -350,17 +349,17 @@ func discord_setup() {
 
 		if command.Name == "" {
 
-			fmt.Println("Trying to init '" + v.Name + "'")
+			Types.NewLog("Trying to init '" + v.Name + "'")
 
 			cmd, err := discord.ApplicationCommandCreate(discord.State.User.ID, settings["server_id"], v)
 			checkError(err)
-			fmt.Println("Initialized '" + cmd.Name + "'")
+			Types.NewLog("Initialized '" + cmd.Name + "'")
 
 		}
 
 	}
 
-	fmt.Println("Discord bot UserID: " + discord.State.User.ID)
+	Types.NewLog("Discord bot UserID: " + discord.State.User.ID)
 
 }
 
@@ -371,7 +370,7 @@ func command_cleanup() {
 
 	for _, v := range commands {
 
-		fmt.Println("Cleaning command", v)
+		Types.NewLog("Cleaning command: ", v)
 
 		if v == nil {
 			continue

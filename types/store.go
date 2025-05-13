@@ -1,7 +1,6 @@
 package types
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -662,7 +661,7 @@ func RequestRotationShop(player PlayerInfo, regional Regional) SkinsPanelLayout 
 
 	if store_front["SkinsPanelLayout"] == nil {
 
-		fmt.Println("No rotation shop (Try again?)")
+		NewLog("No rotation shop (Try again?)")
 		return SkinsPanelLayout{}
 
 	}
@@ -897,7 +896,7 @@ func RequestAccessoryShop(player PlayerInfo, regional Regional) AccessoryShop {
 
 			}
 
-			fmt.Println("Type: " + data["ItemTypeID"].(string) + " Name: " + data["ItemID"].(string))
+			NewLog("Type: " + data["ItemTypeID"].(string) + " Name: " + data["ItemID"].(string))
 
 		}
 

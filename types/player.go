@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 )
 
@@ -78,7 +77,7 @@ func GetPlayerInfo() PlayerInfo {
 	checkError(err)
 
 	if player_info == nil {
-		fmt.Println(player_info)
+		NewLog(player_info)
 		checkError(errors.New("player Info not found"))
 	}
 

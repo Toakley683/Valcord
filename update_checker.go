@@ -48,7 +48,7 @@ func GetLatestInfo() map[string]interface{} {
 
 	if update_data["status"] != nil {
 
-		fmt.Println("Couldn't find any versions")
+		Types.NewLog("Couldn't find any versions")
 
 		time.Sleep(time.Second)
 		return map[string]interface{}{}
@@ -90,7 +90,7 @@ func GetTagInfo(TagName string) map[string]interface{} {
 
 	if tag_data["status"] != nil {
 
-		fmt.Println("Couldn't find any tag")
+		Types.NewLog("Couldn't find any tag")
 
 		time.Sleep(time.Second)
 		return map[string]interface{}{}
@@ -109,8 +109,8 @@ func checkUpdates() {
 
 		// Test versions have no version
 
-		fmt.Println("SHA: " + versionSHA)
-		fmt.Println("Running in test mode, requires version for release mode..")
+		Types.NewLog("SHA: " + versionSHA)
+		Types.NewLog("Running in test mode, requires version for release mode..")
 		time.Sleep(time.Second * 4)
 
 		cls.CLS()
@@ -119,11 +119,11 @@ func checkUpdates() {
 
 	}
 
-	fmt.Println("Running in release mode.")
-	fmt.Println("Checking for updates..")
+	Types.NewLog("Running in release mode.")
+	Types.NewLog("Checking for updates..")
 
-	fmt.Println("Current Version: " + version)
-	fmt.Println("Current SHA: " + versionSHA)
+	Types.NewLog("Current Version: " + version)
+	Types.NewLog("Current SHA: " + versionSHA)
 
 	update_data := GetLatestInfo()
 	tag_data := GetTagInfo(update_data["tag_name"].(string))
@@ -136,8 +136,8 @@ func checkUpdates() {
 
 		// Version is up to date!
 
-		fmt.Println("VersionSHA: " + versionSHA)
-		fmt.Println("Successful, current version is most up to date")
+		Types.NewLog("VersionSHA: " + versionSHA)
+		Types.NewLog("Successful, current version is most up to date")
 
 		time.Sleep(time.Second * 2)
 
@@ -148,18 +148,18 @@ func checkUpdates() {
 
 	// Version is not updated
 
-	fmt.Println("Current Valcord version is not updated")
-	fmt.Println("\nCurrent:")
-	fmt.Println("\tValcord " + version + " (" + versionSHA + ")\n")
-	fmt.Println("Latest:")
-	fmt.Println("\t" + update_data["name"].(string) + " (" + updatedSHA + ")")
+	Types.NewLog("Current Valcord version is not updated")
+	Types.NewLog("\nCurrent:")
+	Types.NewLog("\tValcord " + version + " (" + versionSHA + ")\n")
+	Types.NewLog("Latest:")
+	Types.NewLog("\t" + update_data["name"].(string) + " (" + updatedSHA + ")")
 
 	WaitDelay := time.Second * 15
 	Duration := time.Duration(WaitDelay).Seconds()
 
-	fmt.Println("\nWill attempt to run normally in (" + strconv.Itoa(int(Duration)) + ") seconds..")
+	Types.NewLog("\nWill attempt to run normally in (" + strconv.Itoa(int(Duration)) + ") seconds..")
 
-	fmt.Println("\nYou can find the newest version at 'https://github.com/Toakley683/Valcord/releases/latest'")
+	Types.NewLog("\nYou can find the newest version at 'https://github.com/Toakley683/Valcord/releases/latest'")
 
 	fmt.Print("\n")
 

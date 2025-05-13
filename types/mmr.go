@@ -414,7 +414,7 @@ func GetPlayerMMR(regions *Regional, player *PlayerInfo, PlayerUUID string, Retu
 
 	for gamemodeName, gamemodeData := range queueSkills {
 
-		//log.Println("Trying type: " + gamemodeName)
+		//Types.NewLog("Trying type: " + gamemodeName)
 
 		if len(ReturnedCareers) != 0 {
 
@@ -445,7 +445,7 @@ func GetPlayerMMR(regions *Regional, player *PlayerInfo, PlayerUUID string, Retu
 			TotalWins:                         TotalWins,
 		}
 
-		//log.Println("Getting Career type: " + gamemodeName)
+		//Types.NewLog("Getting Career type: " + gamemodeName)
 
 		gamemodes[gamemodeName] = &gamemode
 
