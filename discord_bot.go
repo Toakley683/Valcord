@@ -283,7 +283,7 @@ func discord_setup() {
 
 		// Listen for matches to auto-send match data
 
-		Types.ListenForMatch(general_valorant_information.player_info, general_valorant_information.regional_data, Types.Client, time.Second*20, discord)
+		Types.ListenForMatch(general_valorant_information.player_info, general_valorant_information.regional_data, Types.Client, time.Second*20, discord, menuListenForMatch)
 
 	})
 

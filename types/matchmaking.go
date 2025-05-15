@@ -279,7 +279,7 @@ func CheckForAgentSelect(player PlayerInfo, regions Regional, client http.Client
 
 }
 
-func ListenForMatch(player PlayerInfo, regions Regional, client http.Client, checkSecondDelta time.Duration, discord *discordgo.Session) {
+func ListenForMatch(player PlayerInfo, regions Regional, client http.Client, checkSecondDelta time.Duration, discord *discordgo.Session, doListen *bool) {
 
 	go func() {
 
@@ -289,6 +289,15 @@ func ListenForMatch(player PlayerInfo, regions Regional, client http.Client, che
 		lastMatchID := ""
 
 		for {
+
+			if !*doListen {
+
+				NewLog("Listening for match disabled, moving on..")
+				// We should not listen for match
+
+				time.Sleep(time.Second * 10)
+				continue
+			}
 
 			NewLog("Checking match status..")
 			NewLog("MatchID: " + lastMatchID)

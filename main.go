@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -33,8 +32,13 @@ var (
 
 	Flags = map[string]bool{}
 
-	menuStatus = &systray.MenuItem{}
+	menuStatus               = &systray.MenuItem{}
+	menuListenForMatch *bool = Pointer(true)
 )
+
+func Pointer[T any](d T) *T {
+	return &d
+}
 
 type ValorantInformation struct {
 	lock_file     Types.Lockfile_type
@@ -201,8 +205,12 @@ func SystraySetup() {
 
 	systray.AddSeparator()
 
-	menuListenForMatch := systray.AddMenuItemCheckbox("Listen for Matches", "Do you want match information to auto-post", true)
+	menuMatchListen := systray.AddMenuItemCheckbox("Listen for Matches", "Do you want match information to auto-post", true)
 	menuConfig := systray.AddMenuItem("Config", "Opens the config directory")
+
+	var listenForMatch bool = menuMatchListen.Checked()
+
+	menuListenForMatch = &listenForMatch
 
 	go func() {
 
@@ -212,21 +220,23 @@ func SystraySetup() {
 			case <-menuConfig.ClickedCh:
 				cmd := exec.Command(`explorer`, Types.Settings_directory)
 				cmd.Run()
-			case <-menuListenForMatch.ClickedCh:
+			case <-menuMatchListen.ClickedCh:
 
-				switch menuListenForMatch.Checked() {
+				switch menuMatchListen.Checked() {
 				case true:
-					menuListenForMatch.Uncheck()
+					menuMatchListen.Uncheck()
 				case false:
-					menuListenForMatch.Check()
+					menuMatchListen.Check()
 				}
+
+				Types.NewLog("Match listening set to:", menuMatchListen.Checked())
+
+				*menuListenForMatch = menuMatchListen.Checked()
 
 			}
 		}
 
 	}()
-
-	fmt.Println(menuListenForMatch)
 
 	systray.AddSeparator()
 	menuQuit := systray.AddMenuItem("Quit", "Quits application")
