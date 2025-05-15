@@ -243,68 +243,72 @@ func CheckForOpenGame() {
 
 	// Check for game being open
 
-	RetryDelay := time.Millisecond * 7500
+	go func() {
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
+		RetryDelay := time.Millisecond * 7500
 
-	Client := http.Client{Transport: tr}
-
-	var res *http.Response
-
-	for {
-
-		lockfile := Types.GetLockfile(false)
-
-		if lockfile.Port == "" {
-			Types.NewLog("Client: Closed")
-			Types.NewLog("Game is not open, retrying..")
-
-			time.Sleep(RetryDelay)
-			continue
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 
-		req, err := http.NewRequest("GET", "https://127.0.0.1:"+lockfile.Port+"/entitlements/v1/token", nil)
-		checkError(err)
+		Client := http.Client{Transport: tr}
 
-		req.Header.Add("Authorization", "Basic "+Types.BasicAuth("riot", lockfile.Password))
+		var res *http.Response
 
-		Res, Err := Client.Do(req)
-		res = Res
+		for {
 
-		if Err != nil {
+			lockfile := Types.GetLockfile(false)
 
-			splitError := strings.Split(Err.Error(), " ")
-			finalError := strings.Join(splitError[6:], " ")
-
-			if finalError == "No connection could be made because the target machine actively refused it." {
-
-				// Game is not open
-
+			if lockfile.Port == "" {
 				Types.NewLog("Client: Closed")
 				Types.NewLog("Game is not open, retrying..")
 
 				time.Sleep(RetryDelay)
 				continue
+			}
+
+			req, err := http.NewRequest("GET", "https://127.0.0.1:"+lockfile.Port+"/entitlements/v1/token", nil)
+			checkError(err)
+
+			req.Header.Add("Authorization", "Basic "+Types.BasicAuth("riot", lockfile.Password))
+
+			Res, Err := Client.Do(req)
+			res = Res
+
+			if Err != nil {
+
+				splitError := strings.Split(Err.Error(), " ")
+				finalError := strings.Join(splitError[6:], " ")
+
+				if finalError == "No connection could be made because the target machine actively refused it." {
+
+					// Game is not open
+
+					Types.NewLog("Client: Closed")
+					Types.NewLog("Game is not open, retrying..")
+
+					time.Sleep(RetryDelay)
+					continue
+
+				}
+
+				checkError(Err)
 
 			}
 
-			checkError(Err)
+			Types.NewLog("Client: Open")
+
+			break
 
 		}
 
-		Types.NewLog("Client: Open")
+		time.Sleep(time.Second * 1)
+		cls.CLS()
 
-		break
+		res.Body.Close()
 
-	}
+		AppInit()
 
-	time.Sleep(time.Second * 1)
-	cls.CLS()
-
-	res.Body.Close()
-
-	AppInit()
+	}()
 
 }
