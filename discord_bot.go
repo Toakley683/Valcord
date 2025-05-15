@@ -349,6 +349,14 @@ func discord_setup() {
 
 	})
 
+	commandInit()
+
+	Types.NewLog("Discord bot UserID: " + discord.State.User.ID)
+
+}
+
+func commandInit() {
+
 	allCommands, err := discord.ApplicationCommands(discord.State.User.ID, settings["server_id"])
 	checkError(err)
 
@@ -378,12 +386,13 @@ func discord_setup() {
 		}
 
 	}
-
-	Types.NewLog("Discord bot UserID: " + discord.State.User.ID)
-
 }
 
 func command_cleanup() {
+
+	if discord == nil {
+		return
+	}
 
 	commands, err := discord.ApplicationCommands(discord.State.User.ID, settings["server_id"])
 	checkError(err)

@@ -200,13 +200,24 @@ func SystraySetup() {
 
 	systray.SetIcon(Icons["logo"])
 
-	menuStatus = systray.AddMenuItemCheckbox("Deactivated", "", false)
-	menuStatus.SetTooltip("Application is not active")
+	Title := systray.AddMenuItem("Valcord", "")
+	Title.Disable()
 
 	systray.AddSeparator()
 
+	menuStatus = systray.AddMenuItemCheckbox("Deactivated", "", false)
+	menuStatus.SetTooltip("Application is not active")
+	menuStatus.Disable()
+
+	systray.AddSeparator()
+
+	Title = systray.AddMenuItem("Settings", "")
+	Title.Disable()
+
 	menuMatchListen := systray.AddMenuItemCheckbox("Listen for Matches", "Do you want match information to auto-post", true)
 	menuConfig := systray.AddMenuItem("Config", "Opens the config directory")
+	menuCommandReload := systray.AddMenuItem("Reload Commands", "Clears and reloads the commands for the discord bot")
+	menuCommandReloadConfirm := menuCommandReload.AddSubMenuItem("Confirm", "THIS MAY CAUSE PROBLEMS / DO NOT USE OFTEN")
 
 	var listenForMatch bool = menuMatchListen.Checked()
 
@@ -217,9 +228,6 @@ func SystraySetup() {
 		for {
 
 			select {
-			case <-menuConfig.ClickedCh:
-				cmd := exec.Command(`explorer`, Types.Settings_directory)
-				cmd.Run()
 			case <-menuMatchListen.ClickedCh:
 
 				switch menuMatchListen.Checked() {
@@ -232,7 +240,12 @@ func SystraySetup() {
 				Types.NewLog("Match listening set to:", menuMatchListen.Checked())
 
 				*menuListenForMatch = menuMatchListen.Checked()
-
+			case <-menuConfig.ClickedCh:
+				cmd := exec.Command(`explorer`, Types.Settings_directory)
+				cmd.Run()
+			case <-menuCommandReloadConfirm.ClickedCh:
+				command_cleanup()
+				commandInit()
 			}
 		}
 
