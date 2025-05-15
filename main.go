@@ -215,7 +215,16 @@ func SystraySetup() {
 	Title.Disable()
 
 	menuMatchListen := systray.AddMenuItemCheckbox("Listen for Matches", "Do you want match information to auto-post", true)
+
+	systray.AddSeparator()
+
+	Title = systray.AddMenuItem("Information", "")
+	Title.Disable()
+
 	menuConfig := systray.AddMenuItem("Config", "Opens the config directory")
+
+	systray.AddSeparator()
+
 	menuCommandReload := systray.AddMenuItem("Reload Commands", "Clears and reloads the commands for the discord bot")
 	menuCommandReloadConfirm := menuCommandReload.AddSubMenuItem("Confirm", "THIS MAY CAUSE PROBLEMS / DO NOT USE OFTEN")
 
