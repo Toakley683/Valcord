@@ -13,12 +13,15 @@ import (
 
 	"github.com/MasterDimmy/go-cls"
 	"github.com/getlantern/systray"
+	"github.com/ncruces/zenity"
 
 	Types "valcord/types"
 )
 
 func checkError(err error) {
 	if err != nil {
+		zenity.Error(err.Error(),
+			zenity.Title("Vencord: Error"))
 		log.Fatal(err)
 	}
 }
@@ -78,6 +81,8 @@ func AppShutdown() {
 	cls.CLS()
 
 	Types.NewLog("Shutting down..")
+
+	os.Exit(0)
 
 }
 

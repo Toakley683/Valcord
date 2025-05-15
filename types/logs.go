@@ -13,6 +13,7 @@ var (
 	CurrentLogName    = ""
 	logDirectoryExist = false
 	LogFile           *os.File
+	MaxLogEntries     = 250
 )
 
 func NewLog(log ...any) {
@@ -24,21 +25,46 @@ func NewLog(log ...any) {
 
 }
 
-func checkLogFile(LogDirectory string) {
+func logCleanup(LogDirectory string) {
+
+	// Remove oldest log file if above max amount of logs
+
+	logEntries, err := os.ReadDir(LogDirectory)
+	checkError(err)
+
+	for C, e := range logEntries {
+
+		info, err := e.Info()
+		checkError(err)
+
+		if C >= MaxLogEntries {
+
+			fmt.Println(e)
+
+			Dir := LogDirectory + "\\" + info.Name()
+
+			os.Remove(Dir)
+
+		}
+	}
+
+}
+
+func checkLogFile(LogDirectory string, LogName string) {
 
 	// Check if File exists, if not create it
 
-	_, err := os.Stat(LogDirectory)
+	_, err := os.Stat(LogDirectory + "\\" + LogName)
 
 	if errors.Is(err, fs.ErrNotExist) {
 
 		// File doesn't exist
 
 		// Create file
-		err = os.WriteFile(LogDirectory, []byte{}, 0700)
+		err = os.WriteFile(LogDirectory+"\\"+LogName, []byte{1}, 0700)
 		checkError(err)
 
-		checkLogFile(LogDirectory)
+		checkLogFile(LogDirectory, LogName)
 
 		return
 
@@ -47,9 +73,11 @@ func checkLogFile(LogDirectory string) {
 
 	if err == nil {
 
+		logCleanup(LogDirectory)
+
 		// File exists, read file and output settings
 
-		LogFile, err = os.OpenFile(LogDirectory, os.O_APPEND|os.O_WRONLY, 0644)
+		LogFile, err = os.OpenFile(LogDirectory+"\\"+LogName, os.O_APPEND|os.O_WRONLY, 0644)
 
 		if err != nil {
 			LogFile.Close()
@@ -81,7 +109,7 @@ func logDirectoryExists() {
 
 	CurrentLogName = "Date(" + day + "-" + month + "-" + year + ")_(" + hour + "-" + minute + "-" + second + ").log"
 
-	checkLogFile(Logs_directory + "\\" + CurrentLogName)
+	checkLogFile(Logs_directory, CurrentLogName)
 
 }
 

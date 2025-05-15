@@ -2,19 +2,24 @@ package main
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net/http"
+	"os"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/MasterDimmy/go-cls"
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
+
+	"github.com/ncruces/zenity"
 
 	Types "valcord/types"
 )
 
 var (
 	settings map[string]string
+
+	Retries = 0
 )
 
 func BeginChecks() {
@@ -24,122 +29,163 @@ func BeginChecks() {
 	PasteDiscordToken()
 }
 
+func VerifyBotToken(token string) bool {
+
+	if token == "" {
+		return false
+	}
+
+	matched, err := regexp.MatchString(`[\w-]{26}\.[\w-]{6}\.[\w-]{38}`, token)
+	checkError(err)
+
+	fmt.Println(matched)
+
+	return matched
+
+}
+
+func VerifyServerID(serverID string) bool {
+
+	if serverID == "" {
+		return false
+	}
+
+	if len(serverID) > 19 {
+		return false
+	}
+
+	matched, err := regexp.MatchString(`^\d{18,19}$`, serverID)
+	checkError(err)
+
+	return matched
+
+}
+
+func VerifyChannelID(channelID string) bool {
+
+	if channelID == "" {
+		return false
+	}
+
+	if len(channelID) > 19 {
+		return false
+	}
+
+	matched, err := regexp.MatchString(`^\d{18,19}$`, channelID)
+	checkError(err)
+
+	return matched
+
+}
+
 func PasteDiscordToken() {
 
 	// Request Discord Bot API Token
 
-	if settings["discord_api_token"] == "" {
+	Retries = Retries + 1
 
-		app := tview.NewApplication()
-
-		text := tview.NewTextView().
-			SetText("Instructions on bot token: 'https://github.com/Toakley683/Valcord/wiki/Obtaining-a-Discord-Bot-Token'").
-			SetTextAlign(tview.AlignLeft).
-			SetDynamicColors(true).
-			SetWordWrap(true)
-
-		input := tview.NewInputField().
-			SetLabel("Enter Discord Bot Token: ").
-			SetPlaceholder(" [PASTE BOT TOKEN HERE]").
-			SetFieldWidth(125).
-			SetAcceptanceFunc(tview.InputFieldMaxLength(100))
-
-		input.SetDoneFunc(func(key tcell.Key) {
-
-			if key == tcell.KeyEnter {
-
-				app.Stop()
-
-				settings["discord_api_token"] = input.GetText()
-				settings["server_id"] = ""
-				settings["current_session_channel"] = ""
-				Types.CheckSettingsData(settings)
-
-				CheckForServerID()
-
-			}
-
-		})
-		input.SetBorder(true)
-
-		flex := tview.NewFlex().
-			SetDirection(tview.FlexRow).
-			AddItem(text, 2, 0, false).
-			AddItem(input, 3, 1, true).
-			AddItem(nil, 0, 1, false)
-
-		frame := tview.NewFrame(flex).
-			SetBorders(1, 1, 1, 1, 0, 0).
-			AddText("╡ Valcord ╞", true, tview.AlignCenter, tview.Styles.PrimaryTextColor).
-			SetBorders(1, 1, 1, 1, 0, 0)
-
-		if err := app.SetRoot(frame, true).Run(); err != nil {
-			panic(err)
-		}
-
-	} else {
-		CheckForServerID()
+	if Retries > 25 {
+		fmt.Println("Ran out of tries")
+		os.Exit(0)
 	}
 
+	if !VerifyBotToken(settings["discord_api_token"]) {
+
+		var DiscordToken string
+		var err error
+
+		if Retries <= 1 {
+
+			DiscordToken, err = zenity.Entry("Enter Discord Bot Token:",
+				zenity.Title("Valcord"))
+
+		} else {
+
+			DiscordToken, err = zenity.Entry("Enter Discord Bot Token:",
+				zenity.Title("Invalid Token Given"))
+
+		}
+
+		if err != nil && err.Error() == "dialog canceled" {
+			os.Exit(0)
+		}
+
+		checkError(err)
+
+		Matched := VerifyBotToken(DiscordToken)
+
+		if Matched {
+
+			settings["discord_api_token"] = DiscordToken
+			settings["server_id"] = ""
+			settings["current_session_channel"] = ""
+			Types.CheckSettingsData(settings)
+
+			Retries = 0
+			CheckForServerID()
+			return
+
+		}
+
+		PasteDiscordToken()
+
+	}
+
+	Retries = 0
+	CheckForServerID()
+
 }
+
 func CheckForServerID() {
 
 	// Request Session Channel ID
 
-	if settings["server_id"] == "" {
+	Retries = Retries + 1
 
-		app := tview.NewApplication()
+	if !VerifyServerID(settings["server_id"]) {
 
-		text := tview.NewTextView().
-			SetText("Instructions on ServerID: 'https://github.com/Toakley683/Valcord/wiki/Setting-Session-Channel'").
-			SetTextAlign(tview.AlignLeft).
-			SetDynamicColors(true).
-			SetWordWrap(true)
+		var ServerID string
+		var err error
 
-		input := tview.NewInputField().
-			SetLabel("ServerID: ").
-			SetPlaceholder(" [PASTE SERVERID HERE]").
-			SetFieldWidth(125).
-			SetAcceptanceFunc(tview.InputFieldMaxLength(100))
+		if Retries <= 1 {
 
-		input.SetDoneFunc(func(key tcell.Key) {
+			ServerID, err = zenity.Entry("Enter ServerID:",
+				zenity.Title("Valcord"))
 
-			if key == tcell.KeyEnter {
+		} else {
 
-				app.Stop()
+			ServerID, err = zenity.Entry("Enter ServerID:",
+				zenity.Title("Invalid ServerID Given"))
 
-				settings["server_id"] = input.GetText()
-				settings["current_session_channel"] = ""
-
-				Types.CheckSettingsData(settings)
-
-				CheckForChannelID()
-
-			}
-
-		})
-		input.
-			SetBorder(true).
-			SetTitleAlign(tview.AlignCenter)
-
-		flex := tview.NewFlex().
-			SetDirection(tview.FlexRow).
-			AddItem(text, 2, 0, false).
-			AddItem(input, 3, 1, true).
-			AddItem(nil, 0, 1, false)
-
-		frame := tview.NewFrame(flex).
-			SetBorders(1, 1, 1, 1, 0, 0).
-			AddText("╡ Valcord ╞", true, tview.AlignCenter, tview.Styles.PrimaryTextColor).
-			SetBorders(1, 1, 1, 1, 0, 0)
-
-		if err := app.SetRoot(frame, true).Run(); err != nil {
-			panic(err)
 		}
 
-	} else {
-		CheckForChannelID()
+		if err != nil && err.Error() == "dialog canceled" {
+			os.Exit(0)
+		}
+
+		checkError(err)
+
+		Matched := VerifyServerID(ServerID)
+
+		if Matched {
+
+			settings["server_id"] = ServerID
+			settings["current_session_channel"] = ""
+			Types.CheckSettingsData(settings)
+
+			Retries = 0
+			CheckForChannelID()
+
+			return
+
+		}
+
+		CheckForServerID()
+
 	}
+
+	Retries = 0
+	CheckForChannelID()
 
 }
 
@@ -147,55 +193,45 @@ func CheckForChannelID() {
 
 	// Request Session Channel ID
 
-	if settings["current_session_channel"] == "" {
+	Retries = Retries + 1
 
-		app := tview.NewApplication()
+	if !VerifyChannelID(settings["current_session_channel"]) {
 
-		text := tview.NewTextView().
-			SetText("Instructions on Session channelID: 'https://github.com/Toakley683/Valcord/wiki/Setting-Session-Channel'").
-			SetTextAlign(tview.AlignLeft).
-			SetDynamicColors(true).
-			SetWordWrap(true)
+		var SessionChannelID string
+		var err error
 
-		input := tview.NewInputField().
-			SetLabel("Session Channel ID: ").
-			SetPlaceholder(" [PASTE CHANNELID HERE]").
-			SetFieldWidth(125).
-			SetAcceptanceFunc(tview.InputFieldMaxLength(100))
+		if Retries <= 1 {
 
-		input.SetDoneFunc(func(key tcell.Key) {
+			SessionChannelID, err = zenity.Entry("Enter Session ChannelID:",
+				zenity.Title("Valcord"))
 
-			if key == tcell.KeyEnter {
+		} else {
 
-				app.Stop()
+			SessionChannelID, err = zenity.Entry("Enter Session ChannelID:",
+				zenity.Title("Invalid Session ChannelID Given"))
 
-				settings["current_session_channel"] = input.GetText()
-
-				Types.CheckSettingsData(settings)
-
-				CheckForOpenGame()
-
-			}
-
-		})
-		input.
-			SetBorder(true).
-			SetTitleAlign(tview.AlignCenter)
-
-		flex := tview.NewFlex().
-			SetDirection(tview.FlexRow).
-			AddItem(text, 2, 0, false).
-			AddItem(input, 3, 1, true).
-			AddItem(nil, 0, 1, false)
-
-		frame := tview.NewFrame(flex).
-			SetBorders(1, 1, 1, 1, 0, 0).
-			AddText("╡ Valcord ╞", true, tview.AlignCenter, tview.Styles.PrimaryTextColor).
-			SetBorders(1, 1, 1, 1, 0, 0)
-
-		if err := app.SetRoot(frame, true).Run(); err != nil {
-			panic(err)
 		}
+
+		if err != nil && err.Error() == "dialog canceled" {
+			os.Exit(0)
+		}
+
+		checkError(err)
+
+		Matched := VerifyChannelID(SessionChannelID)
+
+		if Matched {
+
+			settings["current_session_channel"] = SessionChannelID
+			Types.CheckSettingsData(settings)
+
+			CheckForOpenGame()
+
+			return
+
+		}
+
+		CheckForChannelID()
 
 	}
 

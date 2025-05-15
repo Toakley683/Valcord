@@ -110,8 +110,9 @@ func checkUpdates() {
 		// Test versions have no version
 
 		Types.NewLog("SHA: " + versionSHA)
+		Types.NewLog("Updates will not be checked due to test mode")
 		Types.NewLog("Running in test mode, requires version for release mode..")
-		time.Sleep(time.Second * 4)
+		time.Sleep(time.Second * 2)
 
 		cls.CLS()
 

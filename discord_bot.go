@@ -2,10 +2,12 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/MasterDimmy/go-cls"
 	"github.com/bwmarrin/discordgo"
+	"github.com/ncruces/zenity"
 
 	Types "valcord/types"
 )
@@ -167,6 +169,15 @@ func NoChannelWithID() {
 	Types.CheckSettingsData(settings)
 
 	cleanup()
+
+	zenity.Error("Discord bot is not in server with a channel with the ID '"+settings["current_session_channel"]+"' \n\nWe will open the instruction guide for it now",
+		zenity.Title("Valcord"))
+
+	cmd := "cmd.exe"
+	args := []string{"/c", "start", "https://github.com/Toakley683/Valcord/wiki/Retrieving-Session-Channel"}
+
+	exec.Command(cmd, args...).Start()
+
 	os.Exit(1)
 
 }
@@ -213,7 +224,16 @@ func serverInaccessable(inviteLink string) {
 	Types.CheckSettingsData(settings)
 
 	cleanup()
-	os.Exit(1)
+
+	zenity.Error("Discord bot is not in server with ID '"+settings["server_id"]+"' \n\nWe will open the invite link for it now",
+		zenity.Title("Valcord"))
+
+	cmd := "cmd.exe"
+	args := []string{"/c", "start", inviteLink}
+
+	exec.Command(cmd, args...).Start()
+
+	os.Exit(0)
 
 }
 
