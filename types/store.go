@@ -387,7 +387,12 @@ func RequestFeaturedBanner(player PlayerInfo, regional Regional) []FeaturedBundl
 				data := GetWeaponData(item["ItemID"].(string))
 				displayName = data["displayName"].(string)
 				displayIcon = "https://media.valorant-api.com/weaponskinlevels/" + item["ItemID"].(string) + "/displayicon.png"
-				video_stream = data["streamedVideo"].(string)
+
+				if data["streamedVideo"] != nil {
+
+					video_stream = data["streamedVideo"].(string)
+
+				}
 			case "dd3bf334-87f3-40bd-b043-682a57a8dc3a":
 				// Is Buddy
 				data := BuddyData(item["ItemID"].(string))
