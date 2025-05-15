@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 
 func checkError(err error) {
 	if err != nil {
+		Types.NewLog(err)
 		zenity.Error(err.Error(),
 			zenity.Title("Vencord: Error"))
 		log.Fatal(err)
@@ -199,6 +201,7 @@ func SystraySetup() {
 
 	systray.AddSeparator()
 
+	menuListenForMatch := systray.AddMenuItemCheckbox("Listen for Matches", "Do you want match information to auto-post", true)
 	menuConfig := systray.AddMenuItem("Config", "Opens the config directory")
 
 	go func() {
@@ -209,10 +212,21 @@ func SystraySetup() {
 			case <-menuConfig.ClickedCh:
 				cmd := exec.Command(`explorer`, Types.Settings_directory)
 				cmd.Run()
+			case <-menuListenForMatch.ClickedCh:
+
+				switch menuListenForMatch.Checked() {
+				case true:
+					menuListenForMatch.Uncheck()
+				case false:
+					menuListenForMatch.Check()
+				}
+
 			}
 		}
 
 	}()
+
+	fmt.Println(menuListenForMatch)
 
 	systray.AddSeparator()
 	menuQuit := systray.AddMenuItem("Quit", "Quits application")
