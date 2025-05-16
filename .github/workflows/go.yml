@@ -25,7 +25,7 @@ jobs:
       run: echo "sha_short=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_OUTPUT
 
     - name: Build for Windows
-      run: GOOS=windows GOARCH=amd64 go build -ldflags "-X 'main.versionSHA=${{ steps.shortsha.outputs.sha_short }}' -X 'main.version=${{ github.ref_name }}' -H='windowsgui'" -o valcord.exe -v .
+      run: GOOS=windows GOARCH=amd64 go build -ldflags "-X 'main.versionSHA=${{ steps.shortsha.outputs.sha_short }}' -X 'main.version=${{ github.ref_name }}' -H=windowsgui" -o valcord.exe -v .
 
     - name: Upload Build Artifact to Release
       uses: softprops/action-gh-release@v2
