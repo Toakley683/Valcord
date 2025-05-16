@@ -2,17 +2,22 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"flag"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/MasterDimmy/go-cls"
 	"github.com/getlantern/systray"
+	"github.com/go-ole/go-ole"
+	"github.com/go-ole/go-ole/oleutil"
 	"github.com/ncruces/zenity"
 
 	Types "valcord/types"
@@ -191,7 +196,66 @@ func AppStartup() {
 	BeginChecks()
 }
 
+func makeLink(src, dst string) error {
+	ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_SPEED_OVER_MEMORY)
+	oleShellObject, err := oleutil.CreateObject("WScript.Shell")
+	if err != nil {
+		return err
+	}
+	defer oleShellObject.Release()
+	wshell, err := oleShellObject.QueryInterface(ole.IID_IDispatch)
+	if err != nil {
+		return err
+	}
+	defer wshell.Release()
+	cs, err := oleutil.CallMethod(wshell, "CreateShortcut", dst)
+	if err != nil {
+		return err
+	}
+	idispatch := cs.ToIDispatch()
+	oleutil.PutProperty(idispatch, "TargetPath", src)
+	oleutil.CallMethod(idispatch, "Save")
+	return nil
+}
+
+func setStartMenu(onStartMenu bool) bool {
+
+	AppdataDir, err := os.UserConfigDir()
+	checkError(err)
+
+	AppName := "Valcord.LNK"
+
+	Dir := AppdataDir + `\Microsoft\Windows\Start Menu\Programs\` + AppName
+
+	curDir, err := os.Executable()
+	checkError(err)
+
+	_, err = os.Stat(curDir)
+
+	if err != nil {
+
+		if errors.Is(err, fs.ErrNotExist) {
+			return false
+		}
+
+	}
+
+	switch onStartMenu {
+	case true:
+		E := makeLink(curDir, Dir)
+		checkError(E)
+	case false:
+		E := os.Remove(Dir)
+		checkError(E)
+	}
+
+	return true
+
+}
+
 func SystraySetup() {
+
+	settings = Types.CheckSettings()
 
 	Icons := LoadIcons()
 
@@ -214,7 +278,23 @@ func SystraySetup() {
 	Title = systray.AddMenuItem("Settings", "")
 	Title.Disable()
 
-	menuMatchListen := systray.AddMenuItemCheckbox("Listen for Matches", "Do you want match information to auto-post", true)
+	saved_lfm, err := strconv.ParseBool(settings["listen_for_matches"])
+	if err != nil {
+		saved_lfm = false
+		Types.NewLog(err)
+	}
+
+	menuMatchListen := systray.AddMenuItemCheckbox("Listen for Matches", "Do you want match information to auto-post", saved_lfm)
+
+	saved_sm, err := strconv.ParseBool(settings["in_startmenu"])
+	if err != nil {
+		saved_sm = false
+		Types.NewLog(err)
+	}
+
+	setStartMenu(saved_sm)
+
+	menuStartMenu := systray.AddMenuItemCheckbox("In Start Menu", "Would you like app to be able to open from Start Menu?", saved_sm)
 
 	systray.AddSeparator()
 
@@ -222,6 +302,7 @@ func SystraySetup() {
 	Title.Disable()
 
 	menuConfig := systray.AddMenuItem("Config", "Opens the config directory")
+	menuDiscordBotInvite := systray.AddMenuItem("Discord Bot Invite", "Invites the bot to X server")
 
 	systray.AddSeparator()
 
@@ -239,6 +320,8 @@ func SystraySetup() {
 			select {
 			case <-menuMatchListen.ClickedCh:
 
+				// Change whether program will listen for a new match automatically
+
 				switch menuMatchListen.Checked() {
 				case true:
 					menuMatchListen.Uncheck()
@@ -247,14 +330,59 @@ func SystraySetup() {
 				}
 
 				Types.NewLog("Match listening set to:", menuMatchListen.Checked())
-
 				*menuListenForMatch = menuMatchListen.Checked()
+
+				settings["listen_for_matches"] = strconv.FormatBool(menuMatchListen.Checked())
+				Types.CheckSettingsData(settings)
+
+			case <-menuStartMenu.ClickedCh:
+
+				// Set flag to start this program on program start
+
+				if !setStartMenu(!menuStartMenu.Checked()) {
+					continue
+				}
+
+				switch menuStartMenu.Checked() {
+				case true:
+					menuStartMenu.Uncheck()
+				case false:
+					menuStartMenu.Check()
+				}
+
+				Types.NewLog("Run on start menu set to:", menuStartMenu.Checked())
+
+				settings["in_startmenu"] = strconv.FormatBool(menuStartMenu.Checked())
+				Types.CheckSettingsData(settings)
+
+			case <-menuDiscordBotInvite.ClickedCh:
+
+				if discord == nil {
+					zenity.Error("Discord bot is not online, could not get invite link")
+					continue
+				}
+
+				InviteLink := "https://discord.com/oauth2/authorize?client_id=" + discord.State.User.ID + "&permissions=93184&integration_type=0&scope=bot'"
+
+				cmd := "cmd.exe"
+				args := []string{"/c", "start", InviteLink}
+
+				exec.Command(cmd, args...).Start()
+
 			case <-menuConfig.ClickedCh:
+
+				// Open the config directory for ease of access
+
 				cmd := exec.Command(`explorer`, Types.Settings_directory)
 				cmd.Run()
+
 			case <-menuCommandReloadConfirm.ClickedCh:
+
+				// Reload discord bot commands
+
 				command_cleanup()
 				commandInit()
+
 			}
 		}
 
