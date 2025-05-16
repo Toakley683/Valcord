@@ -121,7 +121,7 @@ func putAppToDir(NewDir string) {
 
 		if err != nil {
 
-			zenity.Error("Could remove old update file..\n" + err.Error())
+			zenity.Error("Could not remove old update file..\n\n" + err.Error())
 
 		}
 		checkError(err)
