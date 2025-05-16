@@ -4,8 +4,11 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/ncruces/zenity"
 )
 
 var (
@@ -14,11 +17,18 @@ var (
 	Settings_directory = config_dir + "\\" + directory_name
 	Logs_directory     = Settings_directory + "\\logs"
 	Settings_file      = Settings_directory + "\\settings.yaml"
+	AppFileDir         = Settings_directory + "\\application\\valcord.exe"
+
+	Settings map[string]string
 )
 
 func CheckSettingsData(settings map[string]string) map[string]string {
 
 	default_settings := get_default_settings()
+
+	if settings == nil {
+		return default_settings
+	}
 
 	for Index, Value := range default_settings {
 
@@ -89,6 +99,108 @@ func check_settings_file() map[string]string {
 
 }
 
+func putAppToDir(NewDir string) {
+
+	CurDir, err := os.Executable()
+	checkError(err)
+
+	data, _ := os.Stat(AppFileDir)
+
+	if CurDir == AppFileDir {
+
+		NewLog("Executable in correct spot, will continue..")
+		return
+
+	}
+
+	if data != nil {
+		NewLog("Found file in application folder..")
+		NewLog("Removing old application")
+
+		err := os.Remove(AppFileDir)
+
+		if err != nil {
+
+			zenity.Error("Could remove old update file..\n" + err.Error())
+
+		}
+		checkError(err)
+
+		NewLog("Removed old application")
+	}
+
+	renameErr := os.Rename(CurDir, AppFileDir)
+
+	if renameErr != nil {
+
+		// Is error
+
+		Spaced := strings.Split(renameErr.Error(), " ")
+		spaced := strings.Join(Spaced[len(Spaced)-3:], " ")
+
+		switch spaced {
+		case "different disk drive.":
+			NewLog("Not on disk")
+
+			data, err := os.ReadFile(CurDir)
+			checkError(err)
+
+			err = os.WriteFile(AppFileDir, data, 0700)
+			checkError(err)
+
+			zenity.Info("Please remove current executable, executable will be found in file that will open", zenity.Title("Valcord"))
+
+			cmd := exec.Command(`explorer`, NewDir)
+			cmd.Run()
+
+			renameErr = nil
+
+			os.Exit(0)
+			return
+
+		case "Access is denied.":
+			NewLog("No access")
+			zenity.Error("No access to file, retry..")
+			return
+		}
+
+		NewLog(spaced)
+
+	}
+	checkError(renameErr)
+
+	NewLog("File has been relocated")
+
+}
+
+func check_app_dir() {
+
+	// Check if Directory exists, if not create it
+
+	dir := Settings_directory + `\application`
+
+	_, err := os.Stat(dir)
+
+	if errors.Is(err, fs.ErrNotExist) {
+		// File doesn't exist
+
+		err := os.Mkdir(dir, 0700)
+		checkError(err)
+
+		check_app_dir()
+		return
+	}
+	checkError(err)
+
+	if err == nil {
+
+		// Directory exists, put current app there
+		putAppToDir(dir)
+
+	}
+
+}
+
 func check_directory() map[string]string {
 
 	// Check if Directory exists, if not create it
@@ -109,6 +221,7 @@ func check_directory() map[string]string {
 	if err == nil {
 
 		// Directory exists, continue steps
+		check_app_dir()
 		return check_settings_file()
 
 	}
@@ -123,6 +236,8 @@ func get_default_settings() map[string]string {
 		"server_id":               "",
 		"owner_userid":            "",
 		"current_session_channel": "",
+		"listen_for_matches":      "true",
+		"in_startmenu":            "true",
 	}
 
 	return settings
@@ -131,10 +246,14 @@ func get_default_settings() map[string]string {
 
 func CheckSettings() map[string]string {
 
-	return check_directory()
+	Info := check_directory()
+
+	Settings = Info
+
+	return Info
 
 }
 
 var (
-	Settings = CheckSettings()
+// Settings = CheckSettings()
 )
