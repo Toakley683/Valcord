@@ -93,6 +93,8 @@ func AppShutdown() {
 
 	Types.NewLog("Shutting down..")
 
+	zenity.Notify("Valcord Shutdown..")
+
 	os.Exit(0)
 
 }
@@ -407,6 +409,8 @@ func SystraySetup() {
 }
 
 func main() {
+
+	zenity.Notify("Valcord started..")
 
 	systray.Run(SystraySetup, AppShutdown)
 
