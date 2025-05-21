@@ -12,6 +12,7 @@ import (
 
 func checkError(err error) {
 	if err != nil {
+		NewLog(err.Error())
 		log.Panic(err)
 	}
 

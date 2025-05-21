@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -1450,6 +1451,12 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 
 		AgentLoopI := 0
 
+		defer func() {
+			if r := recover(); r != nil {
+				NewLog("Panic occured:", r, "\n"+string(debug.Stack()))
+			}
+		}()
+
 		for _, Agent := range Agents {
 
 			if CurrentlyPlayedAgents[Agent.UUID] {
@@ -1460,7 +1467,7 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 				continue
 			}
 
-			FinalAgentList[AgentLoopI] = Agent
+			FinalAgentList[AgentLoopI+2] = Agent
 			AgentLoopI = AgentLoopI + 1
 
 		}
