@@ -16,7 +16,6 @@ func checkError(err error) {
 		NewLog("Error occured:", err.Error(), "\n"+string(debug.Stack()))
 		log.Panic(err)
 	}
-
 }
 
 func BasicAuth(username, password string) string {

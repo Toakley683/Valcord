@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -109,6 +108,8 @@ func checkUpdates() {
 
 		// Test versions have no version
 
+		menuUpdate.SetTitle("Up to date (Testing)")
+
 		Types.NewLog("SHA: " + versionSHA)
 		Types.NewLog("Updates will not be checked due to test mode")
 		Types.NewLog("Running in test mode, requires version for release mode..")
@@ -140,6 +141,8 @@ func checkUpdates() {
 		Types.NewLog("VersionSHA: " + versionSHA)
 		Types.NewLog("Successful, current version is most up to date")
 
+		menuUpdate.SetTitle("Up to date (Release)")
+
 		time.Sleep(time.Second * 2)
 
 		cls.CLS()
@@ -149,20 +152,23 @@ func checkUpdates() {
 
 	// Version is not updated
 
+	menuUpdate.SetTitle("Update available")
+	menuUpdate.Enable()
+
 	Types.NewLog("Current Valcord version is not updated")
 	Types.NewLog("\nCurrent:")
 	Types.NewLog("\tValcord " + version + " (" + versionSHA + ")\n")
 	Types.NewLog("Latest:")
 	Types.NewLog("\t" + update_data["name"].(string) + " (" + updatedSHA + ")")
 
-	WaitDelay := time.Second * 15
+	WaitDelay := time.Second * 2
 	Duration := time.Duration(WaitDelay).Seconds()
 
 	Types.NewLog("\nWill attempt to run normally in (" + strconv.Itoa(int(Duration)) + ") seconds..")
 
 	Types.NewLog("\nYou can find the newest version at 'https://github.com/Toakley683/Valcord/releases/latest'")
 
-	fmt.Print("\n")
+	Types.NewLog("\n")
 
 	time.Sleep(WaitDelay)
 

@@ -37,7 +37,9 @@ var (
 
 	Flags = map[string]bool{}
 
-	menuStatus               = &systray.MenuItem{}
+	menuStatus = &systray.MenuItem{}
+	menuUpdate = &systray.MenuItem{}
+
 	menuListenForMatch *bool = Pointer(true)
 )
 
@@ -275,6 +277,10 @@ func SystraySetup() {
 	menuStatus.SetTooltip("Application is not active")
 	menuStatus.Disable()
 
+	menuUpdate = systray.AddMenuItemCheckbox("Checking for updates..", "", false)
+	menuUpdate.SetTooltip("Application is checking for update..")
+	menuUpdate.Disable()
+
 	systray.AddSeparator()
 
 	Title = systray.AddMenuItem("Settings", "")
@@ -336,6 +342,16 @@ func SystraySetup() {
 
 				settings["listen_for_matches"] = strconv.FormatBool(menuMatchListen.Checked())
 				Types.CheckSettingsData(settings)
+
+			case <-menuUpdate.ClickedCh:
+				Types.NewLog("Clicked")
+
+				link := "https://github.com/Toakley683/Valcord/wiki/Updating-Valcord"
+
+				cmd := "cmd.exe"
+				args := []string{"/c", "start", link}
+
+				exec.Command(cmd, args...).Start()
 
 			case <-menuStartMenu.ClickedCh:
 

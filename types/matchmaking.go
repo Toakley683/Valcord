@@ -1463,10 +1463,6 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 				continue
 			}
 
-			if AgentLoopI > len(FinalAgentList) {
-				continue
-			}
-
 			FinalAgentList[AgentLoopI] = Agent
 			AgentLoopI = AgentLoopI + 1
 
