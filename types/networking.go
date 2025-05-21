@@ -8,11 +8,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"runtime/debug"
 )
 
 func checkError(err error) {
 	if err != nil {
-		NewLog(err.Error())
+		NewLog("Error occured:", err.Error(), "\n"+string(debug.Stack()))
 		log.Panic(err)
 	}
 
