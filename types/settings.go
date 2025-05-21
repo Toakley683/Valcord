@@ -18,6 +18,7 @@ var (
 	Logs_directory     = Settings_directory + "\\logs"
 	Settings_file      = Settings_directory + "\\settings.yaml"
 	AppFileDir         = Settings_directory + "\\application\\valcord.exe"
+	LockFileDir        = Settings_directory + "\\lockfile.pid"
 
 	Settings map[string]string
 )

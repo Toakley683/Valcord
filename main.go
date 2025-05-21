@@ -40,6 +40,8 @@ var (
 	menuStatus = &systray.MenuItem{}
 	menuUpdate = &systray.MenuItem{}
 
+	ValcordLockfile *os.File
+
 	menuListenForMatch *bool = Pointer(true)
 )
 
@@ -54,48 +56,99 @@ type ValorantInformation struct {
 	regional_data Types.Regional
 }
 
-func cleanup() {
-
-	Types.NewLog("Cleaning up data for exit..")
+func cleanDiscordBot() {
+	Types.NewLog("\t - Cleaning up discord bot..")
 
 	if discord != nil {
 
-		Types.NewLog("Closing discord bot..")
-		err := discord.Close()
+		Types.NewLog("\t - Discord Client: Closing")
+		go discord.Close()
+		Types.NewLog("\t - Discord Client: Closed")
+	}
+}
 
-		if err != nil {
+func cleanLockFile() {
 
-			Types.NewLog("Could not disable discord bot: Error(" + err.Error() + ")")
+	Types.NewLog("\t - Cleaning up lock file..")
 
-		} else {
+	_, err := os.Stat(Types.LockFileDir)
 
-			Types.NewLog("Discord bot: Closed")
+	if err == nil {
+
+		// File exists
+
+		Types.NewLog("\t - Lock File: Found")
+
+		Data, _ := os.ReadFile(Types.LockFileDir)
+
+		if string(Data) == strconv.Itoa(os.Getpid()) {
+
+			// Check if contents of lockfile are == to PID (Process ID) ensuring only 1 process runs at any time
+
+			Types.NewLog("\t - Lock File: PID-" + string(Data))
+
+			go ValcordLockfile.Close()
+
+			err := os.Remove(Types.LockFileDir)
+
+			if err != nil {
+				Types.NewLog(err)
+			} else {
+				Types.NewLog("\t - Lock File: Closed")
+			}
 
 		}
 
 	}
+}
 
-	Types.NewLog("Cleaning up Log File..")
+func cleanLogFile() {
+
+	Types.NewLog(" - Cleaning up Log File..")
 
 	if Types.LogFile != nil {
 
-		Types.NewLog("Log file: Closed")
-
-		Types.LogFile.Close()
+		Types.NewLog(" - Log File: Closing")
+		Types.NewLog(" - Log File: Closed")
+		go Types.LogFile.Close()
 
 	}
+}
+
+func cleanup() {
+	Types.NewLog("Cleanup: Pending\n")
+
+	Types.NewLog("cleanUpSequence: [")
+
+	sequence := make([]func(), 2)
+
+	sequence[0] = cleanLockFile
+	sequence[1] = cleanDiscordBot
+
+	for Index, f := range sequence {
+		f()
+
+		if Index == len(sequence)-1 {
+			continue
+		}
+
+		Types.NewLog("")
+	}
+
+	defer cleanLogFile()
+
+	Types.NewLog("]\n")
+	Types.NewLog("Cleanup: Complete\n")
 
 }
 
 func AppShutdown() {
 
+	Types.NewLog("Shutting down..\n")
+
 	cleanup()
 
 	cls.CLS()
-
-	Types.NewLog("Shutting down..")
-
-	zenity.Notify("Valcord Shutdown..")
 
 	os.Exit(0)
 
@@ -257,9 +310,58 @@ func setStartMenu(onStartMenu bool) bool {
 
 }
 
+func createInsLockfile() {
+
+	Data := []byte(strconv.Itoa(os.Getpid()))
+
+	err := os.WriteFile(Types.LockFileDir, Data, 0700)
+	checkError(err)
+
+	ValcordLockfile, err = os.OpenFile(Types.LockFileDir, os.O_RDWR, 0777)
+	checkError(err)
+
+}
+
 func SystraySetup() {
 
 	settings = Types.CheckSettings()
+
+	defer systray.Quit()
+
+	// Check to see if lockfile is there, otherwise close
+
+	_, err := os.Stat(Types.LockFileDir)
+
+	if errors.Is(err, fs.ErrNotExist) {
+
+		// File does not exist
+
+		createInsLockfile()
+
+	} else {
+		checkError(err)
+	}
+
+	if err == nil {
+
+		err := os.Remove(Types.LockFileDir)
+
+		if err != nil {
+
+			Types.NewLog("This process is already running")
+
+			zenity.Error("Process is already running",
+				zenity.Title("Valcord"))
+
+			log.Panicln("Process is already running")
+
+		}
+
+		createInsLockfile()
+
+	}
+
+	// Load system tray
 
 	Icons := LoadIcons()
 
@@ -409,8 +511,6 @@ func SystraySetup() {
 	systray.AddSeparator()
 	menuQuit := systray.AddMenuItem("Quit", "Quits application")
 
-	defer cleanup()
-
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
 
@@ -427,8 +527,6 @@ func SystraySetup() {
 }
 
 func main() {
-
-	zenity.Notify("Valcord started..")
 
 	systray.Run(SystraySetup, AppShutdown)
 

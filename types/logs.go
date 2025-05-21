@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -31,6 +32,12 @@ func logCleanup(LogDirectory string) {
 
 	logEntries, err := os.ReadDir(LogDirectory)
 	checkError(err)
+
+	sort.Slice(logEntries, func(i, j int) bool {
+		iInf, _ := logEntries[i].Info()
+		jInf, _ := logEntries[j].Info()
+		return iInf.ModTime().Unix() > jInf.ModTime().Unix()
+	})
 
 	for C, e := range logEntries {
 
