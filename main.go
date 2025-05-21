@@ -409,6 +409,8 @@ func SystraySetup() {
 	systray.AddSeparator()
 	menuQuit := systray.AddMenuItem("Quit", "Quits application")
 
+	defer cleanup()
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
 
