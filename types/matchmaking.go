@@ -1442,7 +1442,9 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 
 		}
 
-		FinalAgentList := make([]PlayableAgent, len(Agents)-len(CurrentlyPlayedAgents)+1)
+		FinalAgentList := make([]PlayableAgent, (len(Agents)+1)-(len(CurrentlyPlayedAgents)+1))
+
+		NewLog((len(Agents) + 1) - (len(CurrentlyPlayedAgents) + 1))
 
 		NewLog("Total: " + strconv.Itoa(len(Agents)-len(CurrentlyPlayedAgents)))
 
@@ -1451,6 +1453,10 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 		for _, Agent := range Agents {
 
 			if CurrentlyPlayedAgents[Agent.UUID] {
+				continue
+			}
+
+			if AgentLoopI > len(FinalAgentList) {
 				continue
 			}
 
