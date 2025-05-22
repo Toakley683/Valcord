@@ -33,7 +33,7 @@ jobs:
         vt_api_key: ${{ secrets.VT_API_KEY }}
         vt_monitor: true
         update_release_body: true
-        monitor_path: /
+        monitor_path: /ghaction-virustotal
         files: |
           ./valcord*.exe
 
