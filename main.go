@@ -297,21 +297,19 @@ func setStartMenu(onStartMenu bool) bool {
 
 	}
 
-	_, err = os.Stat(Dir)
-
-	if err != nil {
-
-		return true
-
-	}
-
 	switch onStartMenu {
 	case true:
 		E := makeLink(curDir, Dir)
 		checkError(E)
 	case false:
-		E := os.Remove(Dir)
-		checkError(E)
+		_, err = os.Stat(Dir)
+
+		if err == nil {
+
+			E := os.Remove(Dir)
+			checkError(E)
+
+		}
 	}
 
 	return true
@@ -396,7 +394,7 @@ func SystraySetup() {
 
 	saved_lfm, err := strconv.ParseBool(settings["listen_for_matches"])
 	if err != nil {
-		saved_lfm = false
+		saved_lfm = true
 		Types.NewLog(err)
 	}
 
@@ -404,7 +402,7 @@ func SystraySetup() {
 
 	saved_sm, err := strconv.ParseBool(settings["in_startmenu"])
 	if err != nil {
-		saved_sm = false
+		saved_sm = true
 		Types.NewLog(err)
 	}
 
@@ -448,12 +446,8 @@ func SystraySetup() {
 				Types.NewLog("Match listening set to:", menuMatchListen.Checked())
 				*menuListenForMatch = menuMatchListen.Checked()
 
-				if settings != nil {
-
-					settings["listen_for_matches"] = strconv.FormatBool(menuMatchListen.Checked())
-					Types.CheckSettingsData(settings)
-
-				}
+				settings["listen_for_matches"] = strconv.FormatBool(menuMatchListen.Checked())
+				Types.CheckSettingsData(settings)
 
 			case <-menuUpdate.ClickedCh:
 				Types.NewLog("Clicked")
@@ -467,7 +461,7 @@ func SystraySetup() {
 
 			case <-menuStartMenu.ClickedCh:
 
-				// Set flag to start this program on program start
+				// Set flag to start this program on program start#
 
 				if !setStartMenu(!menuStartMenu.Checked()) {
 					continue
@@ -482,12 +476,8 @@ func SystraySetup() {
 
 				Types.NewLog("Run on start menu set to:", menuStartMenu.Checked())
 
-				if settings != nil {
-
-					settings["in_startmenu"] = strconv.FormatBool(menuStartMenu.Checked())
-					Types.CheckSettingsData(settings)
-
-				}
+				settings["in_startmenu"] = strconv.FormatBool(menuStartMenu.Checked())
+				Types.CheckSettingsData(settings)
 
 			case <-menuDiscordBotInvite.ClickedCh:
 
