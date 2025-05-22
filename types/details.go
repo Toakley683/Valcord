@@ -78,7 +78,7 @@ func ItemIDWTypeToStruct(Type string, ItemID string, Quantity int) Item {
 			Amount:        Quantity,
 			Name:          Data.displayName,
 			Description:   "",
-			DisplayIcon:   Data.displayIcon,
+			DisplayIcon:   Data.animationGif,
 			StreamedVideo: Data.animationGif,
 		}
 
