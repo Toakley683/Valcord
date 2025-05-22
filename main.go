@@ -297,6 +297,14 @@ func setStartMenu(onStartMenu bool) bool {
 
 	}
 
+	_, err = os.Stat(Dir)
+
+	if err != nil {
+
+		return true
+
+	}
+
 	switch onStartMenu {
 	case true:
 		E := makeLink(curDir, Dir)
@@ -323,8 +331,6 @@ func createInsLockfile() {
 }
 
 func SystraySetup() {
-
-	settings = Types.CheckSettings()
 
 	defer systray.Quit()
 
@@ -442,8 +448,12 @@ func SystraySetup() {
 				Types.NewLog("Match listening set to:", menuMatchListen.Checked())
 				*menuListenForMatch = menuMatchListen.Checked()
 
-				settings["listen_for_matches"] = strconv.FormatBool(menuMatchListen.Checked())
-				Types.CheckSettingsData(settings)
+				if settings != nil {
+
+					settings["listen_for_matches"] = strconv.FormatBool(menuMatchListen.Checked())
+					Types.CheckSettingsData(settings)
+
+				}
 
 			case <-menuUpdate.ClickedCh:
 				Types.NewLog("Clicked")
@@ -472,8 +482,12 @@ func SystraySetup() {
 
 				Types.NewLog("Run on start menu set to:", menuStartMenu.Checked())
 
-				settings["in_startmenu"] = strconv.FormatBool(menuStartMenu.Checked())
-				Types.CheckSettingsData(settings)
+				if settings != nil {
+
+					settings["in_startmenu"] = strconv.FormatBool(menuStartMenu.Checked())
+					Types.CheckSettingsData(settings)
+
+				}
 
 			case <-menuDiscordBotInvite.ClickedCh:
 

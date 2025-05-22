@@ -73,9 +73,7 @@ func check_settings_file() map[string]string {
 		err = os.WriteFile(Settings_file, data, 0700)
 		checkError(err)
 
-		check_settings_file()
-
-		return nil
+		return check_settings_file()
 
 	}
 	checkError(err)
@@ -95,7 +93,6 @@ func check_settings_file() map[string]string {
 		return CheckSettingsData(settings)
 
 	}
-
 	return nil
 
 }
@@ -223,9 +220,11 @@ func check_directory() map[string]string {
 
 		// Directory exists, continue steps
 		check_app_dir()
+
 		return check_settings_file()
 
 	}
+	check_directory()
 	return nil
 
 }
@@ -248,6 +247,8 @@ func get_default_settings() map[string]string {
 func CheckSettings() map[string]string {
 
 	Info := check_directory()
+
+	NewLog(Info)
 
 	Settings = Info
 

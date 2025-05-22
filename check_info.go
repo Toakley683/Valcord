@@ -24,6 +24,10 @@ var (
 
 func BeginChecks() {
 
+	settings = Types.CheckSettings()
+
+	Types.NewLog(settings)
+
 	PasteDiscordToken()
 }
 
