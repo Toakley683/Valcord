@@ -146,7 +146,9 @@ func putAppToDir(NewDir string) {
 			err = os.WriteFile(AppFileDir, data, 0700)
 			checkError(err)
 
-			zenity.Info("Please remove current executable, executable will be found in file that will open", zenity.Title("Valcord"))
+			zenity.Info("Please remove current executable, executable will be found in file that will open",
+				zenity.Title("Valcord"),
+			)
 
 			cmd := exec.Command(`explorer`, NewDir)
 			cmd.Run()
@@ -157,8 +159,9 @@ func putAppToDir(NewDir string) {
 			return
 
 		case "Access is denied.":
-			NewLog("No access")
-			zenity.Error("No access to file, retry..")
+			NewLog("Access was denied for setting file position")
+			zenity.Error("No access to file, retry..",
+				zenity.Title("Valcord"))
 			return
 		}
 
