@@ -26,6 +26,16 @@ jobs:
 
     - name: Build for Windows
       run: GOOS=windows GOARCH=amd64 go build -ldflags "-X 'main.versionSHA=${{ steps.shortsha.outputs.sha_short }}' -X 'main.version=${{ github.ref_name }}' -H=windowsgui" -o valcord.exe -v .
+    
+    - name: VirusTotal Monitor Scan
+      uses: crazy-max/ghaction-virustotal@v4
+      with:
+        vt_api_key: ${{ secrets.VT_API_KEY }}
+        vt_monitor: true
+        update_release_body: true
+        monitor_path: /
+        files: |
+          ./valcord*.exe
 
     - name: Upload Build Artifact to Release
       uses: softprops/action-gh-release@v2
@@ -35,12 +45,3 @@ jobs:
         files: ./valcord.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: VirusTotal Monitor Scan
-      uses: crazy-max/ghaction-virustotal@v4
-      with:
-        vt_api_key: ${{ secrets.VT_API_KEY }}
-        vt_monitor: true
-        update_release_body: true
-        monitor_path: /ghaction-virustotal
-        files: |
-          .exe$
