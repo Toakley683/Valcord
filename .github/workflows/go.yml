@@ -33,5 +33,6 @@ jobs:
         name: "Valcord ${{ github.ref_name }}"
         tag_name: ${{ github.ref_name }}
         files: ./valcord.exe
+        
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
