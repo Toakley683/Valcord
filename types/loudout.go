@@ -3,6 +3,8 @@ package types
 import (
 	"errors"
 	"net/http"
+	"sync"
+	"sync/atomic"
 )
 
 type LoadoutItem struct {
@@ -31,6 +33,11 @@ type WeaponInfo struct {
 	contentTierIcon  string
 	contentTierRank  int
 	contentTierColor string
+}
+
+type OwnedEntitlement struct {
+	TypeID string
+	ItemID string
 }
 
 var (
@@ -117,6 +124,145 @@ func GetWeaponFromID(ID string) WeaponInfo {
 		contentTierRank:  contentTierRank,
 		contentTierColor: contentTierColor,
 	}
+
+}
+
+func GetOwnedItems(player PlayerInfo, regions Regional, itemType string) []OwnedEntitlement {
+
+	entitlement := GetEntitlementsToken(GetLockfile(true))
+
+	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/store/v1/entitlements/"+player.sub+"/"+itemType, nil)
+	checkError(err)
+
+	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
+	req.Header.Add("X-Riot-Entitlements-JWT", entitlement.token)
+	req.Header.Add("X-Riot-ClientPlatform", player.client_platform)
+	req.Header.Add("X-Riot-ClientVersion", player.version.riotClientVersion)
+
+	res, err := Client.Do(req)
+	checkError(err)
+
+	defer res.Body.Close()
+
+	var item_data map[string]interface{}
+
+	item_data, err = GetJSON(res)
+	checkError(err)
+
+	if item_data["Entitlements"] == nil {
+		return []OwnedEntitlement{} // Return Empty agent list
+	}
+
+	data := item_data["Entitlements"].([]interface{})
+
+	var finalData []interface{}
+
+	if itemType == "e7c63390-eda7-46e0-bb7a-a6abdacd2433" {
+
+		type IndexedItem struct {
+			Index int
+			Value interface{}
+		}
+
+		finalDataChan := make(chan IndexedItem, len(data))
+
+		var wg1 sync.WaitGroup
+
+		var finalIndex int32 = 0
+
+		for _, Val := range data {
+
+			wg1.Add(1)
+
+			go func(Val interface{}) {
+
+				defer wg1.Done()
+
+				V := Val.(map[string]interface{})
+
+				ItemData := ItemIDWTypeToStruct(itemType, V["ItemID"].(string), 0)
+
+				if ItemData.LevelItem == "" {
+
+					index := int(atomic.AddInt32(&finalIndex, 1)) - 1
+
+					finalDataChan <- IndexedItem{
+						Index: index,
+						Value: Val,
+					}
+
+				}
+
+			}(Val)
+
+		}
+
+		wg1.Wait()
+		close(finalDataChan)
+
+		finalData = make([]interface{}, len(finalDataChan))
+
+		for i := range finalDataChan {
+
+			finalData[i.Index] = i.Value
+
+			NewLog(i.Index)
+
+		}
+
+		NewLog(len(finalDataChan))
+
+	} else {
+		finalData = data
+	}
+
+	DataLength := len(finalData)
+
+	if itemType == "01bb38e1-da47-4e6a-9b3d-945fe4655707" {
+
+		// Is Agent
+
+		// Add default agents because they aren't included
+
+		DataLength = len(finalData) + len(DefaultAgents)
+
+	}
+
+	returnedData := make([]OwnedEntitlement, DataLength)
+
+	for Index, Data := range finalData {
+
+		ItemData := Data.(map[string]interface{})
+
+		returnedData[Index] = OwnedEntitlement{
+			TypeID: ItemData["TypeID"].(string),
+			ItemID: ItemData["ItemID"].(string),
+		}
+
+	}
+
+	if itemType == "01bb38e1-da47-4e6a-9b3d-945fe4655707" {
+
+		// Is Agent
+
+		// Add default agents because they aren't included
+
+		I := 0
+
+		for _, Value := range DefaultAgents {
+
+			returnedData[len(data)+I] = OwnedEntitlement{
+				TypeID: "4e60e748-bce6-4faa-9327-ebbe6089d5fe",
+				ItemID: Value.UUID,
+			}
+
+			I++
+
+		}
+
+	}
+
+	return returnedData
 
 }
 

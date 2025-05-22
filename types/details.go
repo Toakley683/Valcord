@@ -22,9 +22,10 @@ type ValorantRank struct {
 }
 
 var (
-	AgentDetails map[string]PlayableAgent
-	MapDetails   map[string]PlayableMap
-	RankDetails  map[int]ValorantRank
+	AgentDetails  map[string]PlayableAgent
+	DefaultAgents map[string]PlayableAgent
+	MapDetails    map[string]PlayableMap
+	RankDetails   map[int]ValorantRank
 
 	CurrencyImages = CurrencyImagesStruct{
 		ValorantPoints: "https://media.valorant-api.com/currencies/85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741/largeicon.png",
@@ -41,11 +42,135 @@ var (
 	}
 )
 
+func ItemIDWTypeToStruct(Type string, ItemID string, Quantity int) Item {
+
+	if ItemID == "" {
+		return Item{}
+	}
+
+	switch Type {
+	case "01bb38e1-da47-4e6a-9b3d-945fe4655707":
+
+		// Agents
+
+		Data := AgentDetails[ItemID]
+
+		return Item{
+			ItemTypeID:    Type,
+			ItemID:        ItemID,
+			Amount:        Quantity,
+			Description:   Data.description,
+			Name:          Data.displayName,
+			DisplayIcon:   Data.displayIcon,
+			StreamedVideo: Data.RoleIcon,
+			Color:         Data.MainColor,
+		}
+
+	case "d5f120f8-ff8c-4aac-92ea-f2b5acbe9475":
+
+		// Sprays
+
+		Data := SprayData(ItemID)
+
+		return Item{
+			ItemTypeID:    Type,
+			ItemID:        ItemID,
+			Amount:        Quantity,
+			Name:          Data.displayName,
+			Description:   "",
+			DisplayIcon:   Data.displayIcon,
+			StreamedVideo: Data.animationGif,
+		}
+
+	case "dd3bf334-87f3-40bd-b043-682a57a8dc3a":
+
+		// Gun Buddies
+
+		Data := BuddyData(ItemID)
+
+		return Item{
+			ItemTypeID:    Type,
+			ItemID:        ItemID,
+			Amount:        Quantity,
+			Description:   "",
+			Name:          Data.displayName,
+			DisplayIcon:   Data.displayIcon,
+			StreamedVideo: Data.displayIcon,
+		}
+
+	case "3f296c07-64c3-494c-923b-fe692a4fa1bd":
+
+		// Cards
+
+		Data := CardData(ItemID)
+
+		return Item{
+			ItemTypeID:    Type,
+			ItemID:        ItemID,
+			Amount:        Quantity,
+			Description:   "",
+			Name:          Data.displayName,
+			DisplayIcon:   Data.displayIcon,
+			StreamedVideo: Data.wideArt,
+		}
+
+	case "de7caa6b-adf7-4588-bbd1-143831e786c6":
+
+		// Titles
+
+		Data := TitleData(ItemID)
+
+		return Item{
+			ItemTypeID:    Type,
+			ItemID:        ItemID,
+			Amount:        Quantity,
+			Description:   "",
+			Name:          Data.titleText,
+			DisplayIcon:   "",
+			StreamedVideo: "",
+		}
+
+	case "e7c63390-eda7-46e0-bb7a-a6abdacd2433":
+
+		// Skins
+
+		Data := GetWeaponData(ItemID)
+
+		Video := ""
+
+		if Data["streamedVideo"] != nil {
+			Video = Data["streamedVideo"].(string)
+		}
+
+		ItemLevel := ""
+
+		if Data["levelItem"] != nil {
+			ItemLevel = Data["levelItem"].(string)
+		}
+
+		return Item{
+			ItemTypeID:    Type,
+			ItemID:        ItemID,
+			Amount:        Quantity,
+			Description:   "",
+			Name:          Data["displayName"].(string),
+			DisplayIcon:   "https://media.valorant-api.com/weaponskinlevels/" + ItemID + "/displayicon.png",
+			StreamedVideo: Video,
+			LevelItem:     ItemLevel,
+		}
+
+	}
+
+	return Item{}
+
+}
+
 func InitAgents() {
 
 	// Initialize Agent details
 
 	AgentDetails = make(map[string]PlayableAgent)
+	DefaultAgents = make(map[string]PlayableAgent)
 
 	req, err := http.NewRequest("GET", "https://valorant-api.com/v1/agents", nil)
 	checkError(err)
@@ -66,6 +191,13 @@ func InitAgents() {
 
 		agent_info := Agent.(map[string]interface{})
 
+		if agent_info["role"] == nil {
+			continue
+		}
+
+		roleData := agent_info["role"].(map[string]interface{})
+		colorData := agent_info["backgroundGradientColors"].([]interface{})
+
 		agent := PlayableAgent{
 			UUID:             agent_info["uuid"].(string),
 			displayName:      agent_info["displayName"].(string),
@@ -75,9 +207,16 @@ func InitAgents() {
 			fullportraitURL:  "https://media.valorant-api.com/agents/" + agent_info["uuid"].(string) + "/fullportrait.png",
 			displayIcon:      "https://media.valorant-api.com/agents/" + agent_info["uuid"].(string) + "/displayicon.png",
 			killfeedPortrait: "https://media.valorant-api.com/agents/" + agent_info["uuid"].(string) + "/killfeedportrait.png",
+			Role:             roleData["displayName"].(string),
+			RoleIcon:         roleData["displayIcon"].(string),
+			MainColor:        colorData[0].(string),
 		}
 
 		AgentDetails[strings.ToLower(agent_info["uuid"].(string))] = agent
+
+		if agent_info["isBaseContent"].(bool) {
+			DefaultAgents[strings.ToLower(agent_info["uuid"].(string))] = agent
+		}
 
 	}
 }
@@ -200,6 +339,9 @@ type PlayableAgent struct {
 	fullportraitURL  string
 	displayIcon      string
 	killfeedPortrait string
+	Role             string
+	RoleIcon         string
+	MainColor        string
 }
 
 type PlayableMap struct {

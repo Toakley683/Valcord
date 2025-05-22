@@ -12,9 +12,12 @@ type Item struct {
 	ItemTypeID    string
 	ItemID        string
 	Amount        int
+	Description   string
 	Name          string
-	displayIcon   string
-	streamedVideo string
+	DisplayIcon   string
+	StreamedVideo string
+	Color         string // Only really available on agents
+	LevelItem     string
 }
 
 type StoreItem struct {
@@ -120,7 +123,7 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, regional Regional) []
 							IconURL: CurrencyIDToImage[Item.CurrencyID],
 						},
 						Image: &discordgo.MessageEmbedImage{
-							URL: Item.Item.displayIcon,
+							URL: Item.Item.DisplayIcon,
 						},
 						Footer: &discordgo.MessageEmbedFooter{
 							Text:    strconv.Itoa(Item.BasePrice),
@@ -158,7 +161,7 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, regional Regional) []
 					},
 					Type: discordgo.EmbedTypeImage,
 					Image: &discordgo.MessageEmbedImage{
-						URL: ShopItems.Rewards[0].displayIcon,
+						URL: ShopItems.Rewards[0].DisplayIcon,
 					},
 					Footer: &discordgo.MessageEmbedFooter{
 						Text:    strconv.Itoa(ShopItems.Cost.ValorantPoints),
@@ -217,7 +220,7 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, regional Regional) []
 					},
 					Type: discordgo.EmbedTypeImage,
 					Image: &discordgo.MessageEmbedImage{
-						URL: accessory_item.Rewards[0].displayIcon,
+						URL: accessory_item.Rewards[0].DisplayIcon,
 					},
 					Footer: &discordgo.MessageEmbedFooter{
 						Text:    strconv.Itoa(accessory_item.Cost.KingdomCredits),
@@ -272,7 +275,7 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, regional Regional) []
 					},
 					Type: discordgo.EmbedTypeImage,
 					Image: &discordgo.MessageEmbedImage{
-						URL: Item.Offer.Rewards[0].displayIcon,
+						URL: Item.Offer.Rewards[0].DisplayIcon,
 					},
 					Footer: &discordgo.MessageEmbedFooter{
 						Text:    strconv.Itoa(Item.DiscountedCost.ValorantPoints),
@@ -427,8 +430,8 @@ func RequestFeaturedBanner(player PlayerInfo, regional Regional) []FeaturedBundl
 					ItemID:        item["ItemID"].(string),
 					Amount:        int(item["Amount"].(float64)),
 					Name:          displayName,
-					displayIcon:   displayIcon,
-					streamedVideo: video_stream,
+					DisplayIcon:   displayIcon,
+					StreamedVideo: video_stream,
 				},
 				BasePrice:       int(storeItem_data["BasePrice"].(float64)),
 				CurrencyID:      storeItem_data["CurrencyID"].(string),
@@ -754,8 +757,8 @@ func RequestRotationShop(player PlayerInfo, regional Regional) SkinsPanelLayout 
 				ItemID:        data["ItemID"].(string),
 				Amount:        int(data["Quantity"].(float64)),
 				Name:          skin_data["displayName"].(string),
-				displayIcon:   "https://media.valorant-api.com/weaponskinlevels/" + data["ItemID"].(string) + "/displayicon.png",
-				streamedVideo: video_stream,
+				DisplayIcon:   "https://media.valorant-api.com/weaponskinlevels/" + data["ItemID"].(string) + "/displayicon.png",
+				StreamedVideo: video_stream,
 			}
 
 		}
@@ -849,7 +852,7 @@ func RequestAccessoryShop(player PlayerInfo, regional Regional) AccessoryShop {
 					ItemID:      data["ItemID"].(string),
 					Amount:      int(data["Quantity"].(float64)),
 					Name:        sprayData.displayName,
-					displayIcon: sprayData.animationGif,
+					DisplayIcon: sprayData.animationGif,
 				}
 
 			}
@@ -865,7 +868,7 @@ func RequestAccessoryShop(player PlayerInfo, regional Regional) AccessoryShop {
 					ItemID:      data["ItemID"].(string),
 					Amount:      int(data["Quantity"].(float64)),
 					Name:        sprayData.displayName,
-					displayIcon: sprayData.displayIcon,
+					DisplayIcon: sprayData.displayIcon,
 				}
 
 			}
@@ -881,7 +884,7 @@ func RequestAccessoryShop(player PlayerInfo, regional Regional) AccessoryShop {
 					ItemID:      data["ItemID"].(string),
 					Amount:      int(data["Quantity"].(float64)),
 					Name:        buddyData.displayName,
-					displayIcon: buddyData.displayIcon,
+					DisplayIcon: buddyData.displayIcon,
 				}
 
 			}
@@ -1049,8 +1052,8 @@ func RequestNightMarket(player PlayerInfo, regional Regional) []ItemOffer {
 				ItemID:        data["ItemID"].(string),
 				Amount:        int(data["Quantity"].(float64)),
 				Name:          skin_data["displayName"].(string),
-				displayIcon:   "https://media.valorant-api.com/weaponskinlevels/" + data["ItemID"].(string) + "/displayicon.png",
-				streamedVideo: video_stream,
+				DisplayIcon:   "https://media.valorant-api.com/weaponskinlevels/" + data["ItemID"].(string) + "/displayicon.png",
+				StreamedVideo: video_stream,
 			}
 
 		}

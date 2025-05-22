@@ -1,12 +1,15 @@
 package main
 
 import (
+	"math"
 	"os"
 	"os/exec"
+	"strconv"
 	"time"
 
 	"github.com/MasterDimmy/go-cls"
 	"github.com/bwmarrin/discordgo"
+	"github.com/lynn9388/supsub"
 	"github.com/ncruces/zenity"
 
 	Types "valcord/types"
@@ -17,6 +20,37 @@ type DISCORD_BOT_DATA struct {
 }
 
 var (
+	ItemTypes = map[string]string{
+		"Agents": "01bb38e1-da47-4e6a-9b3d-945fe4655707",
+		//"Contracts": "f85cb6f7-33e5-4dc8-b609-ec7212301948",
+		"Sprays":      "d5f120f8-ff8c-4aac-92ea-f2b5acbe9475",
+		"Gun Buddies": "dd3bf334-87f3-40bd-b043-682a57a8dc3a",
+		"Cards":       "3f296c07-64c3-494c-923b-fe692a4fa1bd",
+		"Skins":       "e7c63390-eda7-46e0-bb7a-a6abdacd2433",
+		"Titles":      "de7caa6b-adf7-4588-bbd1-143831e786c6",
+	}
+
+	ItemTypeOptions = func() []*discordgo.ApplicationCommandOptionChoice {
+
+		R := make([]*discordgo.ApplicationCommandOptionChoice, len(ItemTypes))
+
+		I := 0
+
+		for N, V := range ItemTypes {
+
+			R[I] = &discordgo.ApplicationCommandOptionChoice{
+				Name:  N,
+				Value: V,
+			}
+
+			I++
+
+		}
+
+		return R
+
+	}
+
 	commands = []*discordgo.ApplicationCommand{
 		{
 			Name:        "setup_channel",
@@ -74,8 +108,35 @@ var (
 				},
 			},
 		},
+		{
+			Name:        "show_owned",
+			Description: "Prints own items of X type",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "type",
+					Description: "What type of item",
+					Required:    true,
+					Choices:     ItemTypeOptions(),
+				},
+			},
+		},
 	}
 )
+
+func clampIntegar(V int, Min int, Max int) int {
+
+	if V > Max {
+		return Max
+	}
+
+	if V < Min {
+		return Min
+	}
+
+	return V
+
+}
 
 func setupComponents() {
 
@@ -140,6 +201,205 @@ func setupComponents() {
 			_, err := s.ChannelMessageSendComplex(i.ChannelID, &Message)
 			checkError(err)
 		}
+
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Requested",
+			},
+		})
+
+		s.InteractionResponseDelete(i.Interaction)
+	}
+
+	Types.CommandHandlers["show_owned"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+		Types.NewLog("Items has been requested")
+
+		Type := i.ApplicationCommandData().Options[0].Value.(string)
+
+		Types.NewLog(Type)
+
+		Items := Types.GetOwnedItems(general_valorant_information.player_info, general_valorant_information.regional_data, Type)
+
+		DefaultLLength := 10
+		MaxPages := int(math.Ceil(float64(len(Items))/float64(DefaultLLength))) - 1
+
+		EmbedList := func(PageIndex int) *[]*discordgo.MessageEmbed {
+
+			LLength := DefaultLLength
+			S := LLength * PageIndex
+
+			if len(Items)-S < 10 {
+				LLength = len(Items) - S
+			}
+
+			Types.NewLog("Start:", S, "Items:", len(Items))
+
+			if len(Items)-S <= 0 {
+
+				return &[]*discordgo.MessageEmbed{
+					{
+						Title: "No content available",
+					},
+				}
+			}
+
+			Types.NewLog(LLength)
+
+			ReturnedList := make([]*discordgo.MessageEmbed, LLength)
+
+			for Index := range LLength {
+
+				if Index+S >= len(Items) {
+					break
+				}
+
+				Data := Items[Index+S]
+
+				ItemData := Types.ItemIDWTypeToStruct(Type, Data.ItemID, 0)
+
+				AuthorIcon := ""
+				ColorHex := "0xffffff"
+				Description := ""
+				DisplayIcon := ItemData.StreamedVideo
+
+				if Type == ItemTypes["Agents"] {
+					AuthorIcon = ItemData.StreamedVideo
+					DisplayIcon = ItemData.DisplayIcon
+				}
+
+				if Type == ItemTypes["Skins"] {
+					AuthorIcon = ""
+					DisplayIcon = ItemData.DisplayIcon
+				}
+
+				if ItemData.Color != "" {
+					ColorHex = "0x" + ItemData.Color[:len(ItemData.Color)-2]
+				}
+
+				if ItemData.Description != "" {
+					Description = ItemData.Description
+				}
+
+				Color, err := strconv.ParseInt(ColorHex, 0, 0)
+				checkError(err)
+
+				ReturnedList[Index] = &discordgo.MessageEmbed{
+					Description: Description,
+					Author: &discordgo.MessageEmbedAuthor{
+						Name:    ItemData.Name + supsub.ToSup("("+strconv.Itoa(Index+S+1)+")"),
+						IconURL: AuthorIcon,
+					},
+					Color: int(Color),
+				}
+
+				if DisplayIcon != "" {
+
+					Types.NewLog("("+strconv.Itoa(Index)+") Icon:", DisplayIcon)
+
+				}
+
+				switch Type {
+				default:
+					ReturnedList[Index].Image = &discordgo.MessageEmbedImage{
+						URL: DisplayIcon,
+					}
+				case "01bb38e1-da47-4e6a-9b3d-945fe4655707": // IsAgent
+					ReturnedList[Index].Thumbnail = &discordgo.MessageEmbedThumbnail{
+						URL: DisplayIcon,
+					}
+				}
+
+				if Index == LLength-1 {
+					ReturnedList[Index].Footer = &discordgo.MessageEmbedFooter{
+						Text: "Entries ( " + strconv.Itoa(LLength-Index+S) + " to " + strconv.Itoa(LLength+S) + " ) ( Total " + strconv.Itoa(len(Items)) + " )" + " ( Page " + strconv.Itoa(PageIndex+1) + " )",
+					}
+
+				}
+
+			}
+
+			return &ReturnedList
+
+		}
+
+		// Add list button to change item type
+
+		msgData, err := s.ChannelMessageSendComplex(i.ChannelID, &discordgo.MessageSend{
+			Content: "Loading",
+		})
+
+		UpdateMessage := func(Page int) {
+
+			Types.NewLog("Page:", Page)
+
+			s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+				Content: func(A string) *string {
+					return &A
+				}(""),
+				ID:      msgData.ID,
+				Channel: msgData.ChannelID,
+				Embeds:  EmbedList(Page),
+				Components: &[]discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Style:    2,
+								CustomID: "content_prev",
+								Label:    "Prev",
+							},
+							discordgo.Button{
+								Style:    2,
+								CustomID: "content_next",
+								Label:    "Next",
+							},
+						},
+					},
+				},
+			})
+
+		}
+
+		UpdateMessage(0)
+
+		PageIndex := 0
+
+		Types.CommandHandlers["content_prev"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Requested",
+				},
+			})
+
+			go s.InteractionResponseDelete(i.Interaction)
+
+			PageIndex = clampIntegar(PageIndex-1, 0, MaxPages)
+
+			UpdateMessage(PageIndex)
+
+		}
+
+		Types.CommandHandlers["content_next"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "Requested",
+				},
+			})
+
+			go s.InteractionResponseDelete(i.Interaction)
+
+			PageIndex = clampIntegar(PageIndex+1, 0, MaxPages)
+
+			UpdateMessage(PageIndex)
+
+		}
+
+		checkError(err)
 
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
