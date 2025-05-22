@@ -292,6 +292,8 @@ func setStartMenu(onStartMenu bool) bool {
 	if err != nil {
 
 		if errors.Is(err, fs.ErrNotExist) {
+			zenity.Error("Please restart Valcord to change this settings",
+				zenity.Title("Valcord"))
 			return false
 		}
 
@@ -482,7 +484,8 @@ func SystraySetup() {
 			case <-menuDiscordBotInvite.ClickedCh:
 
 				if discord == nil {
-					zenity.Error("Discord bot is not online, could not get invite link")
+					zenity.Error("Discord bot is not online, could not get invite link",
+						zenity.Title("Valcord"))
 					continue
 				}
 
