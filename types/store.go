@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -299,6 +300,49 @@ func RequestShopEmbed(shop_type string, player PlayerInfo, regional Regional) []
 
 }
 
+// Request Featured Banner shop
+
+func RequestFeaturedBanner(player PlayerInfo, regional Regional) []FeaturedBundle {
+
+	store_front := RequestStoreFront(player, regional)
+
+	featured_bundle_data := store_front["FeaturedBundle"].(map[string]interface{})
+	bundles_array := featured_bundle_data["Bundles"].([]interface{})
+
+	bundle_structs := make([]FeaturedBundle, len(bundles_array))
+
+	for BundleIndex, Bundle := range bundles_array {
+
+		bundle_data := Bundle.(map[string]interface{})
+
+		item_data := bundle_data["Items"].([]interface{})
+
+		// Organises the bundle entries
+
+		// Organises the bundle's item offers entries
+
+		bundle_struct := FeaturedBundle{
+			ID:                         bundle_data["ID"].(string),
+			DataAssetID:                bundle_data["DataAssetID"].(string),
+			CurrencyID:                 bundle_data["CurrencyID"].(string),
+			Items:                      getStoreItems(item_data),
+			ItemOffers:                 getItemOffers(bundle_data),
+			TotalBaseCost:              NewCost(bundle_data["TotalBaseCost"].(map[string]interface{})),
+			TotalDiscountedCost:        NewCost(bundle_data["TotalDiscountedCost"].(map[string]interface{})),
+			TotalDiscountPercent:       bundle_data["TotalDiscountPercent"].(float64),
+			DurationRemainingInSeconds: int(bundle_data["DurationRemainingInSeconds"].(float64)),
+			WholesaleOnly:              bundle_data["WholesaleOnly"].(bool),
+			IsGiftable:                 int(bundle_data["IsGiftable"].(float64)),
+		}
+
+		bundle_structs[BundleIndex] = bundle_struct
+
+	}
+
+	return bundle_structs
+
+}
+
 // Uses token to get the player's storefront (Including cycling items)
 
 func RequestStoreFront(player PlayerInfo, regional Regional) map[string]interface{} {
@@ -354,167 +398,32 @@ func GetWeaponData(ItemID string) map[string]interface{} {
 
 }
 
-// Request Featured Banner shop
+// Get all ItemOffers from bundle data (Async)
 
-func RequestFeaturedBanner(player PlayerInfo, regional Regional) []FeaturedBundle {
+func getItemOffers(bundle_data map[string]interface{}) []ItemOffer {
 
-	store_front := RequestStoreFront(player, regional)
+	item_offers_data := bundle_data["ItemOffers"].([]interface{})
 
-	featured_bundle_data := store_front["FeaturedBundle"].(map[string]interface{})
-	bundles_array := featured_bundle_data["Bundles"].([]interface{})
+	var wg sync.WaitGroup
 
-	bundle_structs := make([]FeaturedBundle, len(bundles_array))
+	type ChanItem struct {
+		Index int
+		Value ItemOffer
+	}
 
-	for BundleIndex, Bundle := range bundles_array {
+	output := make(chan ChanItem, len(item_offers_data))
+	item_offers := make([]ItemOffer, len(item_offers_data))
 
-		bundle_data := Bundle.(map[string]interface{})
+	for Index, s_item := range item_offers_data {
 
-		item_data := bundle_data["Items"].([]interface{})
+		wg.Add(1)
 
-		// Organises the bundle entries
+		go func(Index int, s_item interface{}) {
 
-		store_items := make([]StoreItem, len(item_data))
-
-		for Index, s_item := range item_data {
-
-			storeItem_data := s_item.(map[string]interface{})
-			item := storeItem_data["Item"].(map[string]interface{})
-
-			var displayName string = ""
-			var displayIcon string = ""
-			var video_stream string = ""
-
-			switch item["ItemTypeID"].(string) {
-			case "e7c63390-eda7-46e0-bb7a-a6abdacd2433":
-				// Is weapon
-				data := GetWeaponData(item["ItemID"].(string))
-				displayName = data["displayName"].(string)
-				displayIcon = "https://media.valorant-api.com/weaponskinlevels/" + item["ItemID"].(string) + "/displayicon.png"
-
-				if data["streamedVideo"] != nil {
-
-					video_stream = data["streamedVideo"].(string)
-
-				}
-			case "dd3bf334-87f3-40bd-b043-682a57a8dc3a":
-				// Is Buddy
-				data := BuddyData(item["ItemID"].(string))
-				displayName = data.displayName
-				displayIcon = data.displayIcon
-			case "d5f120f8-ff8c-4aac-92ea-f2b5acbe9475":
-				// Is Spray
-				data := SprayData(item["ItemID"].(string))
-				displayName = data.displayName
-
-				if data.animationGif != "" {
-					displayIcon = data.animationGif
-				} else {
-					displayIcon = data.fullTransparent
-				}
-
-			case "3f296c07-64c3-494c-923b-fe692a4fa1bd":
-				// Is Card
-				data := CardData(item["ItemID"].(string))
-				displayName = data.displayName
-				displayIcon = data.wideArt
-			case "de7caa6b-adf7-4588-bbd1-143831e786c6":
-				// Is Title
-				data := TitleData(item["ItemID"].(string))
-				displayName = data.titleText
-
-			}
-
-			final_item := StoreItem{
-				Item: Item{
-					ItemTypeID:    item["ItemTypeID"].(string),
-					ItemID:        item["ItemID"].(string),
-					Amount:        int(item["Amount"].(float64)),
-					Name:          displayName,
-					DisplayIcon:   displayIcon,
-					StreamedVideo: video_stream,
-				},
-				BasePrice:       int(storeItem_data["BasePrice"].(float64)),
-				CurrencyID:      storeItem_data["CurrencyID"].(string),
-				DiscountPercent: int(storeItem_data["DiscountPercent"].(float64)),
-				DiscountedPrice: int(storeItem_data["DiscountedPrice"].(float64)),
-				IsPromoItem:     storeItem_data["IsPromoItem"].(bool),
-			}
-
-			store_items[Index] = final_item
-
-		}
-
-		// Organises the bundle's item offers entries
-
-		item_offers_data := bundle_data["ItemOffers"].([]interface{})
-
-		item_offers := make([]ItemOffer, len(item_offers_data))
-
-		for Index, s_item := range item_offers_data {
+			defer wg.Done()
 
 			item_data := s_item.(map[string]interface{})
 			offer := item_data["Offer"].(map[string]interface{})
-			cost := offer["Cost"].(map[string]interface{})
-
-			dc_cost := item_data["DiscountedCost"].(map[string]interface{})
-
-			var ValorantPoints int
-			var KingdomCredits int
-			var FreeAgents int
-			var Radianite int
-
-			if dc_cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"] != nil {
-				ValorantPoints = int(dc_cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"].(float64))
-			} else {
-				ValorantPoints = 0
-			}
-
-			if dc_cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"] != nil {
-				KingdomCredits = int(dc_cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"].(float64))
-			} else {
-				KingdomCredits = 0
-			}
-
-			if dc_cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"] != nil {
-				FreeAgents = int(dc_cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"].(float64))
-			} else {
-				FreeAgents = 0
-			}
-
-			if dc_cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"] != nil {
-				Radianite = int(dc_cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"].(float64))
-			} else {
-				Radianite = 0
-			}
-
-			var ValorantPoints2 int
-			var KingdomCredits2 int
-			var FreeAgents2 int
-			var Radianite2 int
-
-			if cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"] != nil {
-				ValorantPoints2 = int(cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"].(float64))
-			} else {
-				ValorantPoints2 = 0
-			}
-
-			if cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"] != nil {
-				KingdomCredits2 = int(cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"].(float64))
-			} else {
-				KingdomCredits2 = 0
-			}
-
-			if cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"] != nil {
-				FreeAgents2 = int(cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"].(float64))
-			} else {
-				FreeAgents2 = 0
-			}
-
-			if cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"] != nil {
-				Radianite2 = int(cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"].(float64))
-			} else {
-				Radianite2 = 0
-			}
 
 			reward_data := offer["Rewards"].([]interface{})
 
@@ -524,11 +433,9 @@ func RequestFeaturedBanner(player PlayerInfo, regional Regional) []FeaturedBundl
 
 				data := r_data.(map[string]interface{})
 
-				Rewards[Index] = Item{
-					ItemTypeID: data["ItemTypeID"].(string),
-					ItemID:     data["ItemID"].(string),
-					Amount:     int(data["Quantity"].(float64)),
-				}
+				Rewards[Index] = ItemIDWTypeToStruct(data["ItemTypeID"].(string), data["ItemID"].(string), int(data["Quantity"].(float64)))
+
+				NewLog("Banner Item:", Rewards[Index].Name, "- ID:", Rewards[Index].ItemID)
 
 			}
 
@@ -540,125 +447,147 @@ func RequestFeaturedBanner(player PlayerInfo, regional Regional) []FeaturedBundl
 				DiscountPercent = 0
 			}
 
-			final_item := ItemOffer{
-				BundleItemOfferID: item_data["BundleItemOfferID"].(string),
-				Offer: Offer{
-					OfferID:          offer["OfferID"].(string),
-					IsDirectPurchase: offer["IsDirectPurchase"].(bool),
-					StartDate:        offer["StartDate"].(string),
-					Cost: Cost{
-						ValorantPoints: ValorantPoints,
-						KingdomCredits: KingdomCredits,
-						FreeAgents:     FreeAgents,
-						Radianite:      Radianite,
+			output <- ChanItem{
+				Index: Index,
+				Value: ItemOffer{
+					BundleItemOfferID: item_data["BundleItemOfferID"].(string),
+					Offer: Offer{
+						OfferID:          offer["OfferID"].(string),
+						IsDirectPurchase: offer["IsDirectPurchase"].(bool),
+						StartDate:        offer["StartDate"].(string),
+						Cost:             NewCost(offer["Cost"].(map[string]interface{})),
+						Rewards:          Rewards,
 					},
-					Rewards: Rewards,
-				},
-				DiscountPercent: DiscountPercent,
-				DiscountedCost: Cost{
-					ValorantPoints: ValorantPoints2,
-					KingdomCredits: KingdomCredits2,
-					FreeAgents:     FreeAgents2,
-					Radianite:      Radianite2,
+					DiscountPercent: DiscountPercent,
+					DiscountedCost:  NewCost(item_data["DiscountedCost"].(map[string]interface{})),
 				},
 			}
 
-			item_offers[Index] = final_item
-
-		}
-
-		cost := bundle_data["TotalBaseCost"].(map[string]interface{})
-
-		var ValorantPoints1 int
-		var KingdomCredits1 int
-		var FreeAgents1 int
-		var Radianite1 int
-
-		if cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"] != nil {
-			ValorantPoints1 = int(cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"].(float64))
-		} else {
-			ValorantPoints1 = 0
-		}
-
-		if cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"] != nil {
-			KingdomCredits1 = int(cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"].(float64))
-		} else {
-			KingdomCredits1 = 0
-		}
-
-		if cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"] != nil {
-			FreeAgents1 = int(cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"].(float64))
-		} else {
-			FreeAgents1 = 0
-		}
-
-		if cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"] != nil {
-			Radianite1 = int(cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"].(float64))
-		} else {
-			Radianite1 = 0
-		}
-
-		cost = bundle_data["TotalDiscountedCost"].(map[string]interface{})
-
-		var ValorantPoints2 int
-		var KingdomCredits2 int
-		var FreeAgents2 int
-		var Radianite2 int
-
-		if cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"] != nil {
-			ValorantPoints2 = int(cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"].(float64))
-		} else {
-			ValorantPoints2 = 0
-		}
-
-		if cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"] != nil {
-			KingdomCredits2 = int(cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"].(float64))
-		} else {
-			KingdomCredits2 = 0
-		}
-
-		if cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"] != nil {
-			FreeAgents2 = int(cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"].(float64))
-		} else {
-			FreeAgents2 = 0
-		}
-
-		if cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"] != nil {
-			Radianite2 = int(cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"].(float64))
-		} else {
-			Radianite2 = 0
-		}
-
-		bundle_struct := FeaturedBundle{
-			ID:          bundle_data["ID"].(string),
-			DataAssetID: bundle_data["DataAssetID"].(string),
-			CurrencyID:  bundle_data["CurrencyID"].(string),
-			Items:       store_items,
-			ItemOffers:  item_offers,
-			TotalBaseCost: Cost{
-				ValorantPoints: ValorantPoints1,
-				KingdomCredits: KingdomCredits1,
-				FreeAgents:     FreeAgents1,
-				Radianite:      Radianite1,
-			},
-			TotalDiscountedCost: Cost{
-				ValorantPoints: ValorantPoints2,
-				KingdomCredits: KingdomCredits2,
-				FreeAgents:     FreeAgents2,
-				Radianite:      Radianite2,
-			},
-			TotalDiscountPercent:       bundle_data["TotalDiscountPercent"].(float64),
-			DurationRemainingInSeconds: int(bundle_data["DurationRemainingInSeconds"].(float64)),
-			WholesaleOnly:              bundle_data["WholesaleOnly"].(bool),
-			IsGiftable:                 int(bundle_data["IsGiftable"].(float64)),
-		}
-
-		bundle_structs[BundleIndex] = bundle_struct
+		}(Index, s_item)
 
 	}
 
-	return bundle_structs
+	wg.Wait()
+	close(output)
 
+	for Info := range output {
+
+		item_offers[Info.Index] = Info.Value
+
+	}
+
+	return item_offers
+
+}
+
+// Get all StoreItems from data (Async)
+
+func getStoreItems(item_data []interface{}) []StoreItem {
+
+	store_items := make([]StoreItem, len(item_data))
+
+	var wg sync.WaitGroup
+
+	type ChanItem struct {
+		Index int
+		Value StoreItem
+	}
+
+	output := make(chan ChanItem, len(item_data))
+
+	for Index, s_item := range item_data {
+
+		wg.Add(1)
+
+		go func(Index int, s_item interface{}) {
+
+			defer wg.Done()
+
+			storeItem_data := s_item.(map[string]interface{})
+			item := storeItem_data["Item"].(map[string]interface{})
+
+			Item := ItemIDWTypeToStruct(item["ItemTypeID"].(string), item["ItemID"].(string), 1)
+
+			NewLog("Banner Store Item:", Item.Name, "- ID:", Item.ItemID)
+
+			output <- ChanItem{
+				Index: Index,
+				Value: StoreItem{
+					Item:            Item,
+					BasePrice:       int(storeItem_data["BasePrice"].(float64)),
+					CurrencyID:      storeItem_data["CurrencyID"].(string),
+					DiscountPercent: int(storeItem_data["DiscountPercent"].(float64)),
+					DiscountedPrice: int(storeItem_data["DiscountedPrice"].(float64)),
+					IsPromoItem:     storeItem_data["IsPromoItem"].(bool),
+				},
+			}
+
+		}(Index, s_item)
+
+	}
+
+	wg.Wait()
+	close(output)
+
+	for Info := range output {
+
+		store_items[Info.Index] = Info.Value
+
+	}
+
+	return store_items
+}
+
+// Create new Cost checking for null entries
+
+func NewCost(cost map[string]interface{}) Cost {
+
+	if cost == nil {
+
+		return Cost{
+			ValorantPoints: 0,
+			KingdomCredits: 0,
+			FreeAgents:     0,
+			Radianite:      0,
+		}
+
+	}
+
+	var ValorantPoints int
+	var KingdomCredits int
+	var FreeAgents int
+	var Radianite int
+
+	if cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"] != nil {
+		ValorantPoints = int(cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"].(float64))
+	} else {
+		ValorantPoints = 0
+	}
+
+	if cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"] != nil {
+		KingdomCredits = int(cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"].(float64))
+	} else {
+		KingdomCredits = 0
+	}
+
+	if cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"] != nil {
+		FreeAgents = int(cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"].(float64))
+	} else {
+		FreeAgents = 0
+	}
+
+	if cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"] != nil {
+		Radianite = int(cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"].(float64))
+	} else {
+		Radianite = 0
+	}
+
+	return Cost{
+		ValorantPoints: ValorantPoints,
+		KingdomCredits: KingdomCredits,
+		FreeAgents:     FreeAgents,
+		Radianite:      Radianite,
+	}
 }
 
 // Request Rotation shop
@@ -686,95 +615,59 @@ func RequestRotationShop(player PlayerInfo, regional Regional) SkinsPanelLayout 
 	single_item_offers_data := skin_panel_array["SingleItemStoreOffers"].([]interface{})
 	single_item_offers := make([]SingleItemStoreOffer, len(single_item_offers_data))
 
+	type ChanItem struct {
+		Index int
+		Value SingleItemStoreOffer
+	}
+
+	var wg sync.WaitGroup
+	output := make(chan ChanItem, len(single_item_offers_data))
+
 	for Index, offer := range single_item_offers_data {
 
-		offer_data := offer.(map[string]interface{})
+		wg.Add(1)
 
-		cost := offer_data["Cost"].(map[string]interface{})
+		go func(Index int, offer interface{}) {
 
-		var ValorantPoints1 int
-		var KingdomCredits1 int
-		var FreeAgents1 int
-		var Radianite1 int
+			defer wg.Done()
 
-		if cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"] != nil {
-			ValorantPoints1 = int(cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"].(float64))
-		} else {
-			ValorantPoints1 = 0
-		}
+			offer_data := offer.(map[string]interface{})
 
-		if cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"] != nil {
-			KingdomCredits1 = int(cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"].(float64))
-		} else {
-			KingdomCredits1 = 0
-		}
+			reward_data := offer_data["Rewards"].([]interface{})
 
-		if cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"] != nil {
-			FreeAgents1 = int(cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"].(float64))
-		} else {
-			FreeAgents1 = 0
-		}
+			Rewards := make([]Item, len(reward_data))
 
-		if cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"] != nil {
-			Radianite1 = int(cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"].(float64))
-		} else {
-			Radianite1 = 0
-		}
+			for Index, r_data := range reward_data {
 
-		reward_data := offer_data["Rewards"].([]interface{})
+				data := r_data.(map[string]interface{})
 
-		Rewards := make([]Item, len(reward_data))
+				Rewards[Index] = ItemIDWTypeToStruct(data["ItemTypeID"].(string), data["ItemID"].(string), int(data["Quantity"].(float64)))
 
-		req, err := http.NewRequest("GET", "https://valorant-api.com/v1/weapons/skinlevels/"+offer_data["OfferID"].(string), nil)
-		checkError(err)
+				NewLog("Banner Item:", Rewards[Index].Name, "- ID:", Rewards[Index].ItemID)
 
-		res, err := Client.Do(req)
-		checkError(err)
-
-		defer res.Body.Close()
-
-		var weapon_data map[string]interface{}
-
-		weapon_data, err = GetJSON(res)
-		checkError(err)
-
-		skin_data := weapon_data["data"].(map[string]interface{})
-
-		var video_stream string
-
-		if skin_data["streamedVideo"] == nil {
-			video_stream = ""
-		} else {
-			video_stream = skin_data["streamedVideo"].(string)
-		}
-
-		for Index, r_data := range reward_data {
-
-			data := r_data.(map[string]interface{})
-
-			Rewards[Index] = Item{
-				ItemTypeID:    data["ItemTypeID"].(string),
-				ItemID:        data["ItemID"].(string),
-				Amount:        int(data["Quantity"].(float64)),
-				Name:          skin_data["displayName"].(string),
-				DisplayIcon:   "https://media.valorant-api.com/weaponskinlevels/" + data["ItemID"].(string) + "/displayicon.png",
-				StreamedVideo: video_stream,
 			}
 
-		}
+			output <- ChanItem{
+				Index: Index,
+				Value: SingleItemStoreOffer{
+					OfferID:          offer_data["OfferID"].(string),
+					IsDirectPurchase: offer_data["IsDirectPurchase"].(bool),
+					StartDate:        offer_data["StartDate"].(string),
+					Cost:             NewCost(offer_data["Cost"].(map[string]interface{})),
+					Rewards:          Rewards,
+				},
+			}
 
-		single_item_offers[Index] = SingleItemStoreOffer{
-			OfferID:          offer_data["OfferID"].(string),
-			IsDirectPurchase: offer_data["IsDirectPurchase"].(bool),
-			StartDate:        offer_data["StartDate"].(string),
-			Cost: Cost{
-				ValorantPoints: ValorantPoints1,
-				KingdomCredits: KingdomCredits1,
-				FreeAgents:     FreeAgents1,
-				Radianite:      Radianite1,
-			},
-			Rewards: Rewards,
-		}
+		}(Index, offer)
+
+	}
+
+	wg.Wait()
+	close(output)
+
+	for Info := range output {
+
+		single_item_offers[Info.Index] = Info.Value
 
 	}
 
@@ -798,131 +691,59 @@ func RequestAccessoryShop(player PlayerInfo, regional Regional) AccessoryShop {
 	accessory_data := accessory_shop_array["AccessoryStoreOffers"].([]interface{})
 	accessories := make([]Accessory, len(accessory_data))
 
+	type ChanItem struct {
+		Index int
+		Value Accessory
+	}
+
+	var wg sync.WaitGroup
+	output := make(chan ChanItem, len(accessory_data))
+
 	for AccessoryID, Access := range accessory_data {
 
-		accessory := Access.(map[string]interface{})
-		offer_data := accessory["Offer"].(map[string]interface{})
+		wg.Add(1)
 
-		cost := offer_data["Cost"].(map[string]interface{})
+		go func(AccessoryID int, Access interface{}) {
 
-		var ValorantPoints1 int
-		var KingdomCredits1 int
-		var FreeAgents1 int
-		var Radianite1 int
+			defer wg.Done()
 
-		if cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"] != nil {
-			ValorantPoints1 = int(cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"].(float64))
-		} else {
-			ValorantPoints1 = 0
-		}
+			accessory := Access.(map[string]interface{})
+			offer_data := accessory["Offer"].(map[string]interface{})
 
-		if cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"] != nil {
-			KingdomCredits1 = int(cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"].(float64))
-		} else {
-			KingdomCredits1 = 0
-		}
+			accessory_reward_data := offer_data["Rewards"].([]interface{})
 
-		if cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"] != nil {
-			FreeAgents1 = int(cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"].(float64))
-		} else {
-			FreeAgents1 = 0
-		}
+			Accessory_Reward := make([]Item, len(accessory_reward_data))
 
-		if cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"] != nil {
-			Radianite1 = int(cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"].(float64))
-		} else {
-			Radianite1 = 0
-		}
+			for Index, r_data := range accessory_reward_data {
 
-		accessory_reward_data := offer_data["Rewards"].([]interface{})
+				data := r_data.(map[string]interface{})
 
-		Accessory_Reward := make([]Item, len(accessory_reward_data))
+				Accessory_Reward[Index] = ItemIDWTypeToStruct(data["ItemTypeID"].(string), data["ItemID"].(string), int(data["Quantity"].(float64)))
 
-		for Index, r_data := range accessory_reward_data {
-
-			data := r_data.(map[string]interface{})
-
-			if data["ItemTypeID"] == "d5f120f8-ff8c-4aac-92ea-f2b5acbe9475" {
-				// Is spray
-
-				sprayData := SprayData(data["ItemID"].(string))
-
-				Accessory_Reward[Index] = Item{
-					ItemTypeID:  data["ItemTypeID"].(string),
-					ItemID:      data["ItemID"].(string),
-					Amount:      int(data["Quantity"].(float64)),
-					Name:        sprayData.displayName,
-					DisplayIcon: sprayData.animationGif,
-				}
+				NewLog("Banner Item:", Accessory_Reward[Index].Name, "- ID:", Accessory_Reward[Index].ItemID)
 
 			}
 
-			if data["ItemTypeID"] == "3f296c07-64c3-494c-923b-fe692a4fa1bd" {
-
-				// Is Banner/Card
-
-				sprayData := CardData(data["ItemID"].(string))
-
-				Accessory_Reward[Index] = Item{
-					ItemTypeID:  data["ItemTypeID"].(string),
-					ItemID:      data["ItemID"].(string),
-					Amount:      int(data["Quantity"].(float64)),
-					Name:        sprayData.displayName,
-					DisplayIcon: sprayData.displayIcon,
-				}
-
+			output <- ChanItem{
+				Index: AccessoryID,
+				Value: Accessory{
+					OfferID:          offer_data["OfferID"].(string),
+					IsDirectPurchase: offer_data["IsDirectPurchase"].(bool),
+					StartDate:        offer_data["StartDate"].(string),
+					Cost:             NewCost(offer_data["Cost"].(map[string]interface{})),
+					Rewards:          Accessory_Reward,
+				},
 			}
 
-			if data["ItemTypeID"] == "dd3bf334-87f3-40bd-b043-682a57a8dc3a" {
+		}(AccessoryID, Access)
 
-				// Is Buddy
+	}
 
-				buddyData := BuddyData(data["ItemID"].(string))
+	wg.Wait()
+	close(output)
 
-				Accessory_Reward[Index] = Item{
-					ItemTypeID:  data["ItemTypeID"].(string),
-					ItemID:      data["ItemID"].(string),
-					Amount:      int(data["Quantity"].(float64)),
-					Name:        buddyData.displayName,
-					DisplayIcon: buddyData.displayIcon,
-				}
-
-			}
-
-			if data["ItemTypeID"] == "de7caa6b-adf7-4588-bbd1-143831e786c6" {
-
-				// Is Title
-
-				titleData := TitleData(data["ItemID"].(string))
-
-				Accessory_Reward[Index] = Item{
-					ItemTypeID: data["ItemTypeID"].(string),
-					ItemID:     data["ItemID"].(string),
-					Amount:     int(data["Quantity"].(float64)),
-					Name:       titleData.titleText,
-				}
-
-			}
-
-			NewLog("Type: " + data["ItemTypeID"].(string) + " Name: " + data["ItemID"].(string))
-
-		}
-
-		accessory_struct := Accessory{
-			OfferID:          offer_data["OfferID"].(string),
-			IsDirectPurchase: offer_data["IsDirectPurchase"].(bool),
-			StartDate:        offer_data["StartDate"].(string),
-			Cost: Cost{
-				ValorantPoints: ValorantPoints1,
-				KingdomCredits: KingdomCredits1,
-				FreeAgents:     FreeAgents1,
-				Radianite:      Radianite1,
-			},
-			Rewards: Accessory_Reward,
-		}
-
-		accessories[AccessoryID] = accessory_struct
-
+	for Info := range output {
+		accessories[Info.Index] = Info.Value
 	}
 
 	accessoryShopStruct := AccessoryShop{
@@ -954,90 +775,6 @@ func RequestNightMarket(player PlayerInfo, regional Regional) []ItemOffer {
 
 		item_data := s_item.(map[string]interface{})
 		offer := item_data["Offer"].(map[string]interface{})
-		cost := offer["Cost"].(map[string]interface{})
-
-		dc_cost := item_data["DiscountCosts"].(map[string]interface{})
-
-		var ValorantPoints int
-		var KingdomCredits int
-		var FreeAgents int
-		var Radianite int
-
-		if dc_cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"] != nil {
-			ValorantPoints = int(dc_cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"].(float64))
-		} else {
-			ValorantPoints = 0
-		}
-
-		if dc_cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"] != nil {
-			KingdomCredits = int(dc_cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"].(float64))
-		} else {
-			KingdomCredits = 0
-		}
-
-		if dc_cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"] != nil {
-			FreeAgents = int(dc_cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"].(float64))
-		} else {
-			FreeAgents = 0
-		}
-
-		if dc_cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"] != nil {
-			Radianite = int(dc_cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"].(float64))
-		} else {
-			Radianite = 0
-		}
-
-		var ValorantPoints2 int
-		var KingdomCredits2 int
-		var FreeAgents2 int
-		var Radianite2 int
-
-		if cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"] != nil {
-			ValorantPoints2 = int(cost["85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741"].(float64))
-		} else {
-			ValorantPoints2 = 0
-		}
-
-		if cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"] != nil {
-			KingdomCredits2 = int(cost["85ca954a-41f2-ce94-9b45-8ca3dd39a00d"].(float64))
-		} else {
-			KingdomCredits2 = 0
-		}
-
-		if cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"] != nil {
-			FreeAgents2 = int(cost["f08d4ae3-939c-4576-ab26-09ce1f23bb37"].(float64))
-		} else {
-			FreeAgents2 = 0
-		}
-
-		if cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"] != nil {
-			Radianite2 = int(cost["e59aa87c-4cbf-517a-5983-6e81511be9b7"].(float64))
-		} else {
-			Radianite2 = 0
-		}
-
-		req, err := http.NewRequest("GET", "https://valorant-api.com/v1/weapons/skinlevels/"+offer["OfferID"].(string), nil)
-		checkError(err)
-
-		res, err := Client.Do(req)
-		checkError(err)
-
-		defer res.Body.Close()
-
-		var weapon_data map[string]interface{}
-
-		weapon_data, err = GetJSON(res)
-		checkError(err)
-
-		skin_data := weapon_data["data"].(map[string]interface{})
-
-		var video_stream string
-
-		if skin_data["streamedVideo	"] == nil {
-			video_stream = ""
-		} else {
-			video_stream = skin_data["streamedVideo	"].(string)
-		}
 
 		reward_data := offer["Rewards"].([]interface{})
 
@@ -1047,14 +784,9 @@ func RequestNightMarket(player PlayerInfo, regional Regional) []ItemOffer {
 
 			data := r_data.(map[string]interface{})
 
-			Rewards[Index] = Item{
-				ItemTypeID:    data["ItemTypeID"].(string),
-				ItemID:        data["ItemID"].(string),
-				Amount:        int(data["Quantity"].(float64)),
-				Name:          skin_data["displayName"].(string),
-				DisplayIcon:   "https://media.valorant-api.com/weaponskinlevels/" + data["ItemID"].(string) + "/displayicon.png",
-				StreamedVideo: video_stream,
-			}
+			Rewards[Index] = ItemIDWTypeToStruct(data["ItemTypeID"].(string), data["ItemID"].(string), int(data["Quantity"].(float64)))
+
+			NewLog("Banner Item:", Rewards[Index].Name, "- ID:", Rewards[Index].ItemID)
 
 		}
 
@@ -1072,21 +804,11 @@ func RequestNightMarket(player PlayerInfo, regional Regional) []ItemOffer {
 				OfferID:          offer["OfferID"].(string),
 				IsDirectPurchase: offer["IsDirectPurchase"].(bool),
 				StartDate:        offer["StartDate"].(string),
-				Cost: Cost{
-					ValorantPoints: ValorantPoints,
-					KingdomCredits: KingdomCredits,
-					FreeAgents:     FreeAgents,
-					Radianite:      Radianite,
-				},
-				Rewards: Rewards,
+				Cost:             NewCost(offer["Cost"].(map[string]interface{})),
+				Rewards:          Rewards,
 			},
 			DiscountPercent: DiscountPercent,
-			DiscountedCost: Cost{
-				ValorantPoints: ValorantPoints2,
-				KingdomCredits: KingdomCredits2,
-				FreeAgents:     FreeAgents2,
-				Radianite:      Radianite2,
-			},
+			DiscountedCost:  NewCost(item_data["DiscountCosts"].(map[string]interface{})),
 		}
 
 		item_offers[Index] = final_item
