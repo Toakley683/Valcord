@@ -248,8 +248,6 @@ func CheckSettings() map[string]string {
 
 	Info := check_directory()
 
-	NewLog(Info)
-
 	Settings = Info
 
 	return Info
