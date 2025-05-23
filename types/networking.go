@@ -9,10 +9,14 @@ import (
 	"log"
 	"net/http"
 	"runtime/debug"
+
+	"github.com/ncruces/zenity"
 )
 
 func checkError(err error) {
 	if err != nil {
+		zenity.Error("Error occured:\n"+err.Error(),
+			zenity.Title("Valcord"))
 		NewLog("Error occured:", err.Error(), "\n"+string(debug.Stack()))
 		log.Panic(err)
 	}
