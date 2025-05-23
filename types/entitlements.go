@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/MasterDimmy/go-cls"
+	"github.com/ncruces/zenity"
 )
 
 type EntitlementsTokenResponse struct {
@@ -60,12 +61,30 @@ func GetEntitlementsToken(lockfile Lockfile_type) EntitlementsTokenResponse {
 
 			cls.CLS()
 
-			NewLog("Riot Client local webserver not open; Please restart riot client.")
+			zenity.Info("Riot Client local webserver not open; Please restart riot client.",
+				zenity.Title("Valcord"))
 			NewLog("Might be open in background, check TaskManager.")
 
 			fmt.Print("\n")
 
 			log.Fatalln("Invalid URI format")
+
+			return EntitlementsTokenResponse{}
+
+		}
+
+		if entitlement["message"].(string) == "Entitlements token is not ready yet" {
+
+			cls.CLS()
+
+			ErrorText := "Riot Client, was not logged in, Please log in and restart.."
+
+			zenity.Info(ErrorText,
+				zenity.Title("Valcord"))
+
+			NewLog(ErrorText)
+
+			log.Fatalln(ErrorText)
 
 			return EntitlementsTokenResponse{}
 
