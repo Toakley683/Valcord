@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 )
 
 type SeasonExtra struct {
@@ -111,32 +113,47 @@ func GetOldMatchPlayerDetails(MatchID string, PUUID string, regions Regional, pl
 	Players := details["players"].([]interface{})
 
 	var characterID string = ""
-	stats := Stats{}
+	statOutput := make(chan Stats, 1)
+
+	var plrWG sync.WaitGroup
 
 	for _, Player := range Players {
 
-		Player := Player.(map[string]interface{})
+		plrWG.Add(1)
 
-		if Player["subject"].(string) != PUUID {
-			continue
-		}
+		go func(interface{}) {
 
-		Stats := Player["stats"].(map[string]interface{})
+			defer plrWG.Done()
 
-		stats.score = int(Stats["score"].(float64))
-		stats.roundsPlayed = int(Stats["roundsPlayed"].(float64))
-		stats.kills = int(Stats["kills"].(float64))
-		stats.deaths = int(Stats["deaths"].(float64))
-		stats.assists = int(Stats["assists"].(float64))
-		stats.playtimeMillis = Stats["playtimeMillis"].(float64)
+			Player := Player.(map[string]interface{})
 
-		break
+			if Player["subject"].(string) != PUUID {
+				return
+			}
+
+			stats := Stats{}
+
+			Stats := Player["stats"].(map[string]interface{})
+
+			stats.score = int(Stats["score"].(float64))
+			stats.roundsPlayed = int(Stats["roundsPlayed"].(float64))
+			stats.kills = int(Stats["kills"].(float64))
+			stats.deaths = int(Stats["deaths"].(float64))
+			stats.assists = int(Stats["assists"].(float64))
+			stats.playtimeMillis = Stats["playtimeMillis"].(float64)
+
+			statOutput <- stats
+
+		}(Player)
 
 	}
 
+	plrWG.Wait()
+	close(statOutput)
+
 	return PreviousMatchPlayerDetails{
 		CharacterID: characterID,
-		Stats:       stats,
+		Stats:       <-statOutput,
 	}
 
 }
@@ -186,28 +203,53 @@ func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, p
 
 		matchHistory = make([]MatchHistoryEntry, len(Histories))
 
+		type ChanItem struct {
+			Index int
+			Value MatchHistoryEntry
+		}
+
+		var historyWG sync.WaitGroup
+		historyOutput := make(chan ChanItem, len(Histories))
+
 		for I, match := range Histories {
 
-			Chan := make(chan MatchHistoryEntry)
+			historyWG.Add(1)
 
-			go func() {
+			go func(I int, match interface{}) {
+
+				defer historyWG.Done()
 
 				Match := match.(map[string]interface{})
 
+				TStart := time.Now()
+
 				oldMatchData := GetOldMatchPlayerDetails(Match["MatchID"].(string), UUID, *regions, player)
 
-				Chan <- MatchHistoryEntry{
-					MatchID:                    Match["MatchID"].(string),
-					GameStartTime:              Match["GameStartTime"].(float64),
-					QueueID:                    Match["QueueID"].(string),
-					previousMatchPlayerDetails: oldMatchData,
+				NewLog("Old Match Full Data took:", time.Since(TStart))
+
+				historyOutput <- ChanItem{
+					Index: I,
+					Value: MatchHistoryEntry{
+						MatchID:                    Match["MatchID"].(string),
+						GameStartTime:              Match["GameStartTime"].(float64),
+						QueueID:                    Match["QueueID"].(string),
+						previousMatchPlayerDetails: oldMatchData,
+					},
 				}
 
-			}()
-
-			matchHistory[I] = <-Chan
+			}(I, match)
 
 		}
+
+		historyWG.Wait()
+		close(historyOutput)
+
+		for Info := range historyOutput {
+
+			matchHistory[Info.Index] = Info.Value
+
+		}
+
 	} else {
 		matchHistory = make([]MatchHistoryEntry, 0)
 	}

@@ -1,10 +1,10 @@
 package types
 
 import (
-	"errors"
 	"net/http"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type LoadoutItem struct {
@@ -312,7 +312,7 @@ func GetUnlockedAgents(player PlayerInfo, regions Regional) []PlayableAgent {
 
 }
 
-func GetItem(itemD interface{}, loadoutItem chan LoadoutItem) {
+func GetItem(itemD interface{}) LoadoutItem {
 
 	item := itemD.(map[string]interface{})["Sockets"].(map[string]interface{})
 
@@ -347,7 +347,7 @@ func GetItem(itemD interface{}, loadoutItem chan LoadoutItem) {
 
 	}
 
-	loadoutItem <- LoadoutItem{
+	return LoadoutItem{
 		DisplayIcon: DisplayIcon,
 		TypeID:      itemD.(map[string]interface{})["ID"].(string),
 		Buddy:       BuddyInfo,
@@ -369,100 +369,128 @@ func GetLoadout(LoudoutInfo map[string]interface{}, PUUID string) map[string]Loa
 
 	loadouts := LoudoutInfo["Loadouts"].([]interface{})
 
+	type ChanItem struct {
+		Index string
+		Value Loadout
+	}
+
 	Loadouts := map[string]Loadout{}
+	loadoutOutput := make(chan ChanItem, len(loadouts))
+
+	var wg sync.WaitGroup
 
 	for _, playerLoadout := range loadouts {
 
-		pLoudout := playerLoadout.(map[string]interface{})
+		wg.Add(1)
 
-		var playerLoadout map[string]interface{}
+		go func(plrLoadout interface{}) {
 
-		if pLoudout["Loadout"] == nil {
-			playerLoadout = pLoudout
-		} else {
-			playerLoadout = pLoudout["Loadout"].(map[string]interface{})
-		}
+			defer wg.Done()
 
-		if PUUID != "" {
+			pLoudout := plrLoadout.(map[string]interface{})
 
-			if playerLoadout["Subject"].(string) != PUUID {
-				continue
+			var playerLoadout map[string]interface{}
+
+			if pLoudout["Loadout"] == nil {
+				playerLoadout = pLoudout
+			} else {
+				playerLoadout = pLoudout["Loadout"].(map[string]interface{})
 			}
 
-		}
+			if PUUID != "" {
 
-		// Expressions
-
-		expressions := playerLoadout["Expressions"].(map[string]interface{})["AESSelections"].([]interface{})
-		expressionsMap := make([]Expression, len(expressions))
-
-		for I, expression := range expressions {
-
-			expression := expression.(map[string]interface{})
-			Type := ""
-
-			switch expression["TypeID"].(string) {
-			case "03a572de-4234-31ed-d344-ababa488f981":
-				Type = "Flex"
-			case "d5f120f8-ff8c-4aac-92ea-f2b5acbe9475":
-				Type = "Spray"
-			}
-
-			Name := ""
-			IconURL := ""
-
-			if Type == "Spray" {
-
-				sprayData := SprayData(expression["AssetID"].(string))
-
-				Name = sprayData.displayName
-				IconURL = sprayData.fullTransparent
+				if playerLoadout["Subject"].(string) != PUUID {
+					return
+				}
 
 			}
 
-			if Type == "Flex" {
+			// Expressions
 
-				flexData := FlexData(expression["AssetID"].(string))
+			expressions := playerLoadout["Expressions"].(map[string]interface{})["AESSelections"].([]interface{})
+			expressionsMap := make([]Expression, len(expressions))
 
-				Name = flexData.displayName
-				IconURL = flexData.displayIcon
+			for I, expression := range expressions {
+
+				expression := expression.(map[string]interface{})
+
+				if expression["AssetID"] == nil {
+					continue
+				}
+
+				Data := ItemIDWTypeToStruct(expression["TypeID"].(string), expression["AssetID"].(string), 1)
+
+				expressionsMap[I] = Expression{
+					AssetID: Data.ItemID,
+					TypeID:  Data.ItemTypeID,
+					Name:    Data.Name,
+					IconURL: Data.DisplayIcon,
+				}
 
 			}
 
-			if Type == "" {
-				checkError(errors.New("Player loadout, expression type unknown: (" + expression["TypeID"].(string) + ")"))
+			// Items
+
+			items := playerLoadout["Items"].(map[string]interface{})
+			itemMap := map[string]LoadoutItem{}
+
+			T := time.Now()
+
+			type ChanLItem struct {
+				Index string
+				Value LoadoutItem
 			}
 
-			expressionsMap[I] = Expression{
-				AssetID: expression["AssetID"].(string),
-				TypeID:  expression["TypeID"].(string),
-				Name:    Name,
-				IconURL: IconURL,
+			itemOutput := make(chan ChanLItem, len(items))
+
+			var wg2 sync.WaitGroup
+
+			for Type, itemD := range items {
+
+				wg2.Add(1)
+
+				go func(Type string, itemD interface{}) {
+
+					defer wg2.Done()
+
+					lItem := GetItem(itemD)
+
+					itemOutput <- ChanLItem{
+						Index: Type,
+						Value: lItem,
+					}
+
+				}(Type, itemD)
+
 			}
 
-		}
+			wg2.Wait()
+			close(itemOutput)
 
-		// Items
+			for Info := range itemOutput {
+				itemMap[Info.Index] = Info.Value
+			}
 
-		items := playerLoadout["Items"].(map[string]interface{})
-		itemMap := map[string]LoadoutItem{}
+			NewLog("Loadout took:", time.Since(T).Seconds())
 
-		for Type, itemD := range items {
+			loadoutOutput <- ChanItem{
+				Index: playerLoadout["Subject"].(string),
+				Value: Loadout{
+					Expressions: expressionsMap,
+					Items:       itemMap,
+				},
+			}
 
-			loadout := make(chan LoadoutItem)
+		}(playerLoadout)
 
-			go GetItem(itemD, loadout)
+	}
 
-			itemMap[Type] = <-loadout
+	wg.Wait()
+	close(loadoutOutput)
 
-		}
+	for Info := range loadoutOutput {
 
-		loadout := Loadout{
-			Expressions: expressionsMap,
-			Items:       itemMap,
-		}
-
-		Loadouts[playerLoadout["Subject"].(string)] = loadout
+		Loadouts[Info.Index] = Info.Value
 
 	}
 

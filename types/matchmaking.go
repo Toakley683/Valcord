@@ -1292,9 +1292,9 @@ func Request_match(player_info PlayerInfo, regional Regional, ChannelID string, 
 		}
 
 		loadout := GetMatchLoudout(MatchInfo.MatchID, P.Subject, player_info, regional)[P.Subject]
-
 		PlayerNames := getPlayerNames([]string{P.Subject}, player_info, regional)[PlayerID]
 		matchHistory, err := GetMatchHistoryOfUUID(P.Subject, 0, 10, &regional, player_info)
+
 		checkError(err)
 
 		input := &ProfileEmbedInput{
