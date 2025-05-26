@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/MasterDimmy/go-cls"
@@ -39,6 +40,7 @@ var (
 
 	menuStatus = &systray.MenuItem{}
 	menuUpdate = &systray.MenuItem{}
+	menuRegion = &systray.MenuItem{}
 
 	ValcordLockfile *os.File
 
@@ -162,6 +164,8 @@ func AppInit() {
 	player_info := Types.GetPlayerInfo()
 	region_data := Types.GetRegionData()
 
+	menuRegion.SetTitle("Region: " + Types.Regions[strings.ToUpper(region_data.Shard)])
+
 	general_valorant_information = ValorantInformation{
 		lock_file:     lockfile,
 		entitlements:  entitlements,
@@ -277,6 +281,13 @@ func makeLink(src, dst string) error {
 
 func setStartMenu(onStartMenu bool) bool {
 
+	// If testing mode then don't set
+
+	if version == "" {
+		Types.NewLog("Can not set start menu in testing mode")
+		return false
+	}
+
 	AppdataDir, err := os.UserConfigDir()
 	checkError(err)
 
@@ -388,6 +399,10 @@ func SystraySetup() {
 	menuUpdate = systray.AddMenuItemCheckbox("Checking for updates..", "", false)
 	menuUpdate.SetTooltip("Application is checking for update..")
 	menuUpdate.Disable()
+
+	menuRegion = systray.AddMenuItemCheckbox("Checking Region..", "", false)
+	menuRegion.SetTooltip("Application is checking for your region..")
+	menuRegion.Disable()
 
 	systray.AddSeparator()
 
