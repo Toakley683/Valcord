@@ -155,7 +155,7 @@ func GetCurrentAgentSelectID(player PlayerInfo, regions Regional) string {
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/pregame/v1/players/"+player.puuid, nil)
+	req, err := http.NewRequest("GET", "https://glz-"+regions.Region+"-1."+regions.Shard+".a.pvp.net/pregame/v1/players/"+player.puuid, nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
@@ -189,7 +189,7 @@ func GetCurrentMatchID(player PlayerInfo, regions Regional) string {
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/core-game/v1/players/"+player.puuid, nil)
+	req, err := http.NewRequest("GET", "https://glz-"+regions.Region+"-1."+regions.Shard+".a.pvp.net/core-game/v1/players/"+player.puuid, nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
@@ -328,7 +328,7 @@ func GetAgentSelectInfo(player PlayerInfo, regions Regional) CurrentAgentSelect 
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/pregame/v1/matches/"+MatchID, nil)
+	req, err := http.NewRequest("GET", "https://glz-"+regions.Region+"-1."+regions.Shard+".a.pvp.net/pregame/v1/matches/"+MatchID, nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
@@ -457,7 +457,7 @@ func GetCurrentMatchInfo(player PlayerInfo, regions Regional) CurrentGameMatch {
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/core-game/v1/matches/"+MatchID, nil)
+	req, err := http.NewRequest("GET", "https://glz-"+regions.Region+"-1."+regions.Shard+".a.pvp.net/core-game/v1/matches/"+MatchID, nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
@@ -587,7 +587,7 @@ func NewAgentSelectEmbed(agentSelect CurrentAgentSelect, player PlayerInfo, regi
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("PUT", "https://pd."+regions.shard+".a.pvp.net/name-service/v2/players", body)
+	req, err := http.NewRequest("PUT", "https://pd."+regions.Shard+".a.pvp.net/name-service/v2/players", body)
 	checkError(err)
 
 	req.Header.Add("Content-Type", "application/json")
@@ -770,7 +770,7 @@ func getPlayerNames(PlayerIDS []string, player PlayerInfo, regions Regional) map
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("PUT", "https://pd."+regions.shard+".a.pvp.net/name-service/v2/players", body)
+	req, err := http.NewRequest("PUT", "https://pd."+regions.Shard+".a.pvp.net/name-service/v2/players", body)
 	checkError(err)
 
 	req.Header.Add("Content-Type", "application/json")
@@ -1407,7 +1407,7 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 
 		entitlement := GetEntitlementsToken(GetLockfile(true))
 
-		req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/quit", nil)
+		req, err := http.NewRequest("POST", "https://glz-"+regional.Region+"-1."+regional.Shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/quit", nil)
 		checkError(err)
 
 		req.Header.Add("Content-Type", "application/json")
@@ -1483,7 +1483,7 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 
 		entitlement := GetEntitlementsToken(GetLockfile(true))
 
-		req, err := http.NewRequest("POST", "https://glz-"+regional.region+"-1."+regional.shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/select/"+FinalAgentList[AgentIndex].UUID, nil)
+		req, err := http.NewRequest("POST", "https://glz-"+regional.Region+"-1."+regional.Shard+".a.pvp.net/pregame/v1/matches/"+AgentSelect.ID+"/select/"+FinalAgentList[AgentIndex].UUID, nil)
 		checkError(err)
 
 		req.Header.Add("Content-Type", "application/json")

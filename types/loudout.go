@@ -131,7 +131,7 @@ func GetOwnedItems(player PlayerInfo, regions Regional, itemType string) []Owned
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/store/v1/entitlements/"+player.sub+"/"+itemType, nil)
+	req, err := http.NewRequest("GET", "https://pd."+regions.Shard+".a.pvp.net/store/v1/entitlements/"+player.sub+"/"+itemType, nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
@@ -272,7 +272,7 @@ func GetUnlockedAgents(player PlayerInfo, regions Regional) []PlayableAgent {
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/store/v1/entitlements/"+player.sub+"/01bb38e1-da47-4e6a-9b3d-945fe4655707", nil)
+	req, err := http.NewRequest("GET", "https://pd."+regions.Shard+".a.pvp.net/store/v1/entitlements/"+player.sub+"/01bb38e1-da47-4e6a-9b3d-945fe4655707", nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
@@ -296,7 +296,16 @@ func GetUnlockedAgents(player PlayerInfo, regions Regional) []PlayableAgent {
 
 	agents := tier_data["Entitlements"].([]interface{})
 
-	agentArray := make([]PlayableAgent, len(agents))
+	agentArray := make([]PlayableAgent, len(agents)+len(DefaultAgents))
+
+	I := 0
+
+	for _, Value := range DefaultAgents {
+
+		agentArray[I] = Value
+		I++
+
+	}
 
 	for I, AgentData := range agents {
 
@@ -304,9 +313,11 @@ func GetUnlockedAgents(player PlayerInfo, regions Regional) []PlayableAgent {
 
 		AgentID := AgentData["ItemID"].(string)
 
-		agentArray[I] = AgentDetails[AgentID]
+		agentArray[I+len(DefaultAgents)] = AgentDetails[AgentID]
 
 	}
+
+	NewLog(len(agentArray))
 
 	return agentArray
 
@@ -500,11 +511,11 @@ func GetLoadout(LoudoutInfo map[string]interface{}, PUUID string) map[string]Loa
 
 func GetMatchLoudout(matchUUID string, PUUID string, player PlayerInfo, regions Regional) map[string]Loadout {
 
-	//"https://pd." + regions.shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
+	//"https://pd." + regions.Shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/core-game/v1/matches/"+matchUUID+"/loadouts", nil)
+	req, err := http.NewRequest("GET", "https://glz-"+regions.Region+"-1."+regions.Shard+".a.pvp.net/core-game/v1/matches/"+matchUUID+"/loadouts", nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
@@ -528,11 +539,11 @@ func GetMatchLoudout(matchUUID string, PUUID string, player PlayerInfo, regions 
 
 func GetAgentSelectLoudout(matchUUID string, PUUID string, player PlayerInfo, regions Regional) map[string]Loadout {
 
-	//"https://pd." + regions.shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
+	//"https://pd." + regions.Shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://glz-"+regions.region+"-1."+regions.shard+".a.pvp.net/pregame/v1/matches/"+matchUUID+"/loadouts", nil)
+	req, err := http.NewRequest("GET", "https://glz-"+regions.Region+"-1."+regions.Shard+".a.pvp.net/pregame/v1/matches/"+matchUUID+"/loadouts", nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)

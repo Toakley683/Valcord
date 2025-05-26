@@ -26,6 +26,7 @@ var (
 	DefaultAgents map[string]PlayableAgent
 	MapDetails    map[string]PlayableMap
 	RankDetails   map[int]ValorantRank
+	Regions       map[string]string
 
 	CurrencyImages = CurrencyImagesStruct{
 		ValorantPoints: "https://media.valorant-api.com/currencies/85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741/largeicon.png",
@@ -316,12 +317,26 @@ func InitRanks() {
 
 }
 
+func InitRegions() {
+
+	Regions = make(map[string]string)
+
+	Regions["NA"] = "North America"
+	Regions["LATAM"] = "Latin America"
+	Regions["BR"] = "Brazil"
+	Regions["EU"] = "Europe"
+	Regions["KR"] = "Korea"
+	Regions["AP"] = "Asia Pacific"
+
+}
+
 func Init_val_details() {
 
 	setup_networking()
 	InitAgents()
 	InitMaps()
 	InitRanks()
+	InitRegions()
 	Init_Weapons()
 
 	// Initialize Map details

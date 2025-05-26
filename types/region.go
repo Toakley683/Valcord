@@ -6,8 +6,8 @@ import (
 )
 
 type Regional struct {
-	region string
-	shard  string
+	Region string
+	Shard  string
 }
 
 func GetRegionData() Regional {
@@ -29,8 +29,8 @@ func GetRegionData() Regional {
 	shard := reg.FindStringSubmatch(shooterContents)[2]
 
 	return Regional{
-		region: region,
-		shard:  shard,
+		Region: region,
+		Shard:  shard,
 	}
 
 }

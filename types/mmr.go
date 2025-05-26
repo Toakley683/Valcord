@@ -92,7 +92,7 @@ func GetOldMatchPlayerDetails(MatchID string, PUUID string, regions Regional, pl
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/match-details/v1/matches/"+MatchID, nil)
+	req, err := http.NewRequest("GET", "https://pd."+regions.Shard+".a.pvp.net/match-details/v1/matches/"+MatchID, nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
@@ -173,7 +173,7 @@ func GetMatchHistoryOfUUID(UUID string, Start int, End int, regions *Regional, p
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/match-history/v1/history/"+UUID+"?startIndex="+StartString+"&endIndex="+EndString, nil)
+	req, err := http.NewRequest("GET", "https://pd."+regions.Shard+".a.pvp.net/match-history/v1/history/"+UUID+"?startIndex="+StartString+"&endIndex="+EndString, nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
@@ -420,11 +420,11 @@ func GetSeasons(gamemodeName string, gamemodeData map[string]interface{}) ([]*Se
 
 func GetPlayerMMR(regions *Regional, player *PlayerInfo, PlayerUUID string, ReturnedCareers map[string]bool) Career {
 
-	//"https://pd." + regions.shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
+	//"https://pd." + regions.Shard + ".a.pvp.net/mmr/v1/players/" + PlayerUUID
 
 	entitlement := GetEntitlementsToken(GetLockfile(true))
 
-	req, err := http.NewRequest("GET", "https://pd."+regions.shard+".a.pvp.net/mmr/v1/players/"+PlayerUUID, nil)
+	req, err := http.NewRequest("GET", "https://pd."+regions.Shard+".a.pvp.net/mmr/v1/players/"+PlayerUUID, nil)
 	checkError(err)
 
 	req.Header.Add("Authorization", "Bearer "+entitlement.accessToken)
