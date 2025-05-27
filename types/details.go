@@ -131,6 +131,22 @@ func ItemIDWTypeToStruct(Type string, ItemID string, Quantity int) Item {
 			StreamedVideo: "",
 		}
 
+	case "03a572de-4234-31ed-d344-ababa488f981":
+
+		// Flex
+
+		Data := FlexData(ItemID)
+
+		return Item{
+			ItemTypeID:    Type,
+			ItemID:        ItemID,
+			Amount:        Quantity,
+			Description:   "",
+			Name:          Data.displayName,
+			DisplayIcon:   Data.displayIcon,
+			StreamedVideo: Data.displayIcon,
+		}
+
 	case "e7c63390-eda7-46e0-bb7a-a6abdacd2433":
 
 		// Skins
