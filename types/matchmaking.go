@@ -1227,6 +1227,8 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 
 	for I, ExpressionData := range P.loadout.Expressions {
 
+		NewLog(ExpressionData.Name)
+
 		ExpressionDesc = ExpressionDesc + "`Expression (" + strconv.Itoa(I) + ")` - [`" + ExpressionData.Name + "`](" + ExpressionData.IconURL + ") \n"
 
 	}
@@ -1241,8 +1243,153 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 
 	NewLog("Profile: Obtained")
 
+	// Check if USER is added or not, if not added don't have add friend button
+
+	lockfile := GetLockfile(false)
+
+	isFriend := CheckIfOnFriendsList(player.sub, lockfile)
+	isOutbound := CheckIfRequestOutbound(player.sub, lockfile)
+
+	AddFriendComponents := []discordgo.MessageComponent{}
+	RemoveRequestComponents := []discordgo.MessageComponent{}
+	FinalOutputComponents := AddFriendComponents
+
+	if !isFriend {
+		AddFriendComponents = []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						CustomID: "add_friend",
+						Label:    "Add Friend",
+						Style:    3,
+					},
+				},
+			},
+		}
+
+		RemoveRequestComponents = []discordgo.MessageComponent{
+			discordgo.ActionsRow{
+				Components: []discordgo.MessageComponent{
+					discordgo.Button{
+						CustomID: "remove_friend_request",
+						Label:    "Remove Friend Request",
+						Style:    4,
+					},
+				},
+			},
+		}
+	}
+
+	// If outbound request, instead remove request
+
+	FinalOutputComponents = AddFriendComponents
+
+	if isOutbound {
+
+		FinalOutputComponents = RemoveRequestComponents
+
+	}
+
+	CommandHandlers["add_friend"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Requested",
+			},
+		})
+
+		go s.InteractionResponseDelete(i.Interaction)
+
+		// If user is already added then tell discord user (Change button label?)
+
+		if isFriend {
+			NewLog("Failed to add friend, already on friend's list")
+			return
+		}
+
+		// Check if request is outbound, if is then tell user
+
+		if isOutbound {
+			NewLog("Failed to add friend, already sent friend request")
+			return
+		}
+
+		if sendFriendRequest(player.acct.game_name, player.acct.tag_line, lockfile) {
+
+			NewLog("Added", player.acct.game_name+":"+player.acct.tag_line, "to your friend's list")
+
+			discord.FollowupMessageEdit(
+				i.Interaction, i.Message.ID, &discordgo.WebhookEdit{
+					Embeds:     &Embeds,
+					Components: &RemoveRequestComponents,
+				},
+			)
+
+		} else {
+
+			NewLog("Could not add", player.acct.game_name+":"+player.acct.tag_line, "to your friend's list")
+
+		}
+
+	}
+
+	CommandHandlers["remove_friend_request"] = func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "Requested",
+			},
+		})
+
+		go s.InteractionResponseDelete(i.Interaction)
+
+		// If user is already added then tell discord user (Change button label?)
+
+		if isFriend {
+			NewLog("Failed to remove request, already on friend's list")
+			return
+		}
+
+		// Check if request is outbound, if not, then report error
+
+		if !isOutbound {
+			NewLog("Failed to remove request, no friend request sent")
+			return
+		}
+
+		if removeFriendRequest(player.sub, lockfile) {
+
+			NewLog("Removed", player.acct.game_name+":"+player.acct.tag_line, "from your friend request list")
+
+			if CheckIfRequestOutbound(player.sub, lockfile) {
+
+				discord.FollowupMessageEdit(
+					i.Interaction, i.Message.ID, &discordgo.WebhookEdit{
+						Embeds:     &Embeds,
+						Components: &RemoveRequestComponents,
+					},
+				)
+
+			} else {
+
+				discord.FollowupMessageEdit(
+					i.Interaction, i.Message.ID, &discordgo.WebhookEdit{
+						Embeds:     &Embeds,
+						Components: &[]discordgo.MessageComponent{},
+					},
+				)
+
+			}
+
+		}
+
+	}
+
 	return &discordgo.WebhookParams{
-		Embeds: Embeds,
+		Embeds:     Embeds,
+		Components: FinalOutputComponents,
 	}
 
 }
@@ -1307,7 +1454,7 @@ func Request_match(player_info PlayerInfo, regional Regional, ChannelID string, 
 			loadout:        &loadout,
 		}
 
-		FinalResponse := CreatePlayerProfile(input, player_info, regional, discord)
+		FinalResponse := CreatePlayerProfile(input, player_info, regional, s)
 
 		FinalResponse.Flags = discordgo.MessageFlagsEphemeral
 
@@ -1388,7 +1535,7 @@ func Request_agentSelect(player_info PlayerInfo, regional Regional, ChannelID st
 			loadout:        &loadout,
 		}
 
-		FinalResponse := CreatePlayerProfile(input, player_info, regional, discord)
+		FinalResponse := CreatePlayerProfile(input, player_info, regional, s)
 
 		FinalResponse.Flags = discordgo.MessageFlagsEphemeral
 
