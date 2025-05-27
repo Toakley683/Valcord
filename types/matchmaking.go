@@ -1247,8 +1247,8 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 
 	lockfile := GetLockfile(false)
 
-	isFriend := CheckIfOnFriendsList(player.sub, lockfile)
-	isOutbound := CheckIfRequestOutbound(player.sub, lockfile)
+	isFriend := CheckIfOnFriendsList(P.Subject, lockfile)
+	isOutbound := CheckIfRequestOutbound(P.Subject, lockfile)
 
 	AddFriendComponents := []discordgo.MessageComponent{}
 	RemoveRequestComponents := []discordgo.MessageComponent{}
@@ -1315,9 +1315,9 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 			return
 		}
 
-		if sendFriendRequest(player.acct.game_name, player.acct.tag_line, lockfile) {
+		if sendFriendRequest(P.GameName, P.TagLine, lockfile) {
 
-			NewLog("Added", player.acct.game_name+":"+player.acct.tag_line, "to your friend's list")
+			NewLog("Added", P.GameName+":"+P.TagLine, "to your friend's list")
 
 			discord.FollowupMessageEdit(
 				i.Interaction, i.Message.ID, &discordgo.WebhookEdit{
@@ -1328,7 +1328,7 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 
 		} else {
 
-			NewLog("Could not add", player.acct.game_name+":"+player.acct.tag_line, "to your friend's list")
+			NewLog("Could not add", P.GameName+":"+P.TagLine, "to your friend's list")
 
 		}
 
@@ -1361,7 +1361,7 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 
 		if removeFriendRequest(player.sub, lockfile) {
 
-			NewLog("Removed", player.acct.game_name+":"+player.acct.tag_line, "from your friend request list")
+			NewLog("Removed", P.GameName+":"+P.TagLine, "from your friend request list")
 
 			if CheckIfRequestOutbound(player.sub, lockfile) {
 
