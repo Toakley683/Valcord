@@ -156,6 +156,16 @@ func AppShutdown() {
 
 }
 
+func reloadRegion(val_info *ValorantInformation) {
+
+	val_info.regional_data = Types.GetRegionData()
+
+	menuRegion.SetTitle("Region: " + Types.Regions[strings.ToUpper(val_info.regional_data.Shard)])
+
+	Types.NewLog("Got new region:", val_info.regional_data.Shard)
+
+}
+
 func AppInit() {
 
 	Types.Init_val_details()
@@ -440,6 +450,8 @@ func SystraySetup() {
 	menuCommandReload := systray.AddMenuItem("Reload Commands", "Clears and reloads the commands for the discord bot")
 	menuCommandReloadConfirm := menuCommandReload.AddSubMenuItem("Confirm", "THIS MAY CAUSE PROBLEMS / DO NOT USE OFTEN")
 
+	menuRegionReload := systray.AddMenuItem("Reload Region", "Reloads the region, (USE IF YOU'VE CHANGED REGION)")
+
 	var listenForMatch bool = menuMatchListen.Checked()
 
 	menuListenForMatch = &listenForMatch
@@ -524,6 +536,16 @@ func SystraySetup() {
 
 				command_cleanup()
 				commandInit()
+
+			case <-menuRegionReload.ClickedCh:
+
+				// Reload Region
+
+				menuRegion.SetTitle("Checking Region..")
+
+				Types.NewLog("Getting new region")
+
+				reloadRegion(&general_valorant_information)
 
 			}
 		}
