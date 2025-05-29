@@ -2,6 +2,7 @@ package types
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,8 +42,83 @@ type OwnedEntitlement struct {
 }
 
 var (
-	WeaponIDToName = map[string]string{}
+	WeaponIDToName       = map[string]string{}
+	WeaponIdToCategory   = map[string]string{}
+	WeaponCategories     = map[string]bool{}
+	WeaponCategoryToText = map[string]string{}
+	WeaponSortOrder      = map[string]int{}
 )
+
+func WeaponIDToRow(WeaponName string) int {
+
+	WeaponName = strings.ToUpper(WeaponName)
+
+	switch WeaponName {
+
+	// Melee Weapons
+
+	case "MELEE":
+		return 0
+
+	// Sidearm Weapons
+
+	case "CLASSIC":
+		return 0
+	case "SHORTY":
+		return 1
+	case "FRENZY":
+		return 2
+	case "GHOST":
+		return 3
+	case "SHERIFF":
+		return 4
+
+	// SMG Weapons
+
+	case "STINGER":
+		return 0
+	case "SPECTRE":
+		return 1
+
+	// Rifle Weapons
+
+	case "BULLDOG":
+		return 0
+	case "GUARDIAN":
+		return 1
+	case "PHANTOM":
+		return 2
+	case "VANDAL":
+		return 3
+
+	// Sniper Rifle Weapons
+
+	case "MARSHAL":
+		return 0
+	case "OUTLAW":
+		return 1
+	case "OPERATOR":
+		return 2
+
+	// Shotgun Weapons
+
+	case "BUCKY":
+		return 0
+	case "JUDGE":
+		return 1
+
+	// Machine Gun Weapons
+
+	case "ARES":
+		return 0
+	case "ODIN":
+		return 1
+
+	}
+
+	return -1
+
+}
 
 func Init_Weapons() {
 
@@ -65,6 +141,28 @@ func Init_Weapons() {
 
 		weapon := weapon.(map[string]interface{})
 
+		if weapon["displayName"].(string) == "Melee" {
+
+			WeaponCategoryToText[weapon["category"].(string)] = weapon["displayName"].(string)
+			WeaponSortOrder[weapon["displayName"].(string)] = 0
+
+		}
+
+		RowOrder := WeaponIDToRow(weapon["displayName"].(string))
+
+		if RowOrder == -1 {
+			NewLog("WEAPON:", weapon["displayName"].(string), "COULD NOT GET A ROW")
+		}
+
+		WeaponSortOrder[weapon["displayName"].(string)] = RowOrder
+
+		NewLog("Weapon:", weapon["displayName"].(string), "At row:", WeaponSortOrder[weapon["displayName"].(string)])
+
+		if !WeaponCategories[weapon["category"].(string)] {
+			WeaponCategories[weapon["category"].(string)] = true
+		}
+
+		WeaponIdToCategory[weapon["uuid"].(string)] = weapon["category"].(string)
 		WeaponIDToName[weapon["uuid"].(string)] = weapon["displayName"].(string)
 
 	}

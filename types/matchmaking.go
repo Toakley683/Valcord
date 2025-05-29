@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -1155,17 +1156,34 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 	}
 
 	LoadoutDescription := ""
-	LoadoutIndex := 0
 
 	LongestName := 0
 
+	type ItemData struct {
+		WeaponType  string
+		Name        string
+		LoadoutItem LoadoutItem
+	}
+
+	CategoryOrder := make([]string, len(WeaponCategories))
+	Categories := map[string]map[int]ItemData{}
+
+	// Format the weapon data for putting into description
+
 	for _, WeaponName := range P.loadout.Items {
+
+		if len(Categories[WeaponIdToCategory[WeaponName.TypeID]]) <= 0 {
+
+			Categories[WeaponIdToCategory[WeaponName.TypeID]] = map[int]ItemData{}
+
+		}
 
 		name := WeaponName.weaponInfo.displayName
 
 		SkinNameSplit := strings.Split(name, " ")
 
 		WeaponType := WeaponIDToName[WeaponName.TypeID]
+		Index := WeaponSortOrder[WeaponType]
 
 		if SkinNameSplit[len(SkinNameSplit)-1] == WeaponType {
 
@@ -1180,33 +1198,72 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 			LongestName = len(name)
 		}
 
+		Categories[WeaponIdToCategory[WeaponName.TypeID]][Index] = ItemData{
+			Name:        name,
+			WeaponType:  WeaponType,
+			LoadoutItem: WeaponName,
+		}
 	}
 
-	for ID, WeaponType := range WeaponIDToName {
+	// Create the sort order for the categories
 
-		LoadoutIndex = LoadoutIndex + 1
+	for Category := range Categories {
 
-		SkinName := P.loadout.Items[ID].weaponInfo.displayName
+		OutputOrder := 0
 
-		SkinNameSplit := strings.Split(SkinName, " ")
-
-		if SkinNameSplit[len(SkinNameSplit)-1] == WeaponType {
-
-			SkinNameSplit[len(SkinNameSplit)-1] = ""
-
+		switch Category {
+		case "EEquippableCategory::Melee":
+			OutputOrder = 0
+		case "EEquippableCategory::Sidearm":
+			OutputOrder = 1
+		case "EEquippableCategory::SMG":
+			OutputOrder = 2
+		case "EEquippableCategory::Rifle":
+			OutputOrder = 3
+		case "EEquippableCategory::Sniper":
+			OutputOrder = 4
+		case "EEquippableCategory::Shotgun":
+			OutputOrder = 5
+		case "EEquippableCategory::Heavy":
+			OutputOrder = 6
 		}
 
-		SkinName = strings.Join(SkinNameSplit, " ")
-		SkinName = strings.TrimRight(SkinName, " ")
+		CategoryOrder[OutputOrder] = Category
 
-		//BuddyName := strings.ReplaceAll(P.loadout.Items[ID].Buddy.displayName, "_", " ")
+	}
 
-		LoadoutDescription = LoadoutDescription + "`" + StringLengther(WeaponType+":", 10) + StringLengther(SkinName, LongestName+1) + "`"
+	for _, Category := range CategoryOrder {
 
-		if P.loadout.Items[ID].Buddy.displayName != "" {
+		LoadoutWeapons := Categories[Category]
 
-			//LoadoutDescription = LoadoutDescription + " `Buddy: " + BuddyName + "`"
+		for i := 0; i < len(LoadoutWeapons); i++ {
 
+			Weapon := LoadoutWeapons[i]
+
+			Type := Weapon.WeaponType
+			Name := Weapon.Name
+
+			LoadoutDescription = LoadoutDescription + "`" + StringLengther(Type+":", 10) + StringLengther(Name, LongestName+1) + "`"
+
+			if false {
+
+				// Adds buddy information, Default: False
+
+				if Weapon.LoadoutItem.Buddy.displayName != "" {
+
+					BuddyName := strings.ReplaceAll(Weapon.LoadoutItem.Buddy.displayName, "_", " ")
+
+					re := regexp.MustCompile(`([a-z])([A-Z])|([A-Z]+)([A-Z][a-z])`)
+
+					BuddyName = re.ReplaceAllString(BuddyName, `$1$3 $2$4`)
+
+					LoadoutDescription = LoadoutDescription + " `Buddy: " + BuddyName + "`"
+
+				}
+
+			}
+
+			LoadoutDescription = LoadoutDescription + "\n"
 		}
 
 		LoadoutDescription = LoadoutDescription + "\n"
@@ -1319,6 +1376,8 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 
 			NewLog("Added", P.GameName+":"+P.TagLine, "to your friend's list")
 
+			isOutbound = CheckIfRequestOutbound(P.Subject, lockfile)
+
 			discord.FollowupMessageEdit(
 				i.Interaction, i.Message.ID, &discordgo.WebhookEdit{
 					Embeds:     &Embeds,
@@ -1353,6 +1412,8 @@ func CreatePlayerProfile(P *ProfileEmbedInput, player PlayerInfo, regions Region
 		}
 
 		// Check if request is outbound, if not, then report error
+
+		isOutbound = CheckIfRequestOutbound(P.Subject, lockfile)
 
 		if !isOutbound {
 			NewLog("Failed to remove request, no friend request sent")
