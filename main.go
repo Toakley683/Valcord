@@ -40,6 +40,7 @@ var (
 
 	menuStatus = &systray.MenuItem{}
 	menuUpdate = &systray.MenuItem{}
+	menuBranch = &systray.MenuItem{}
 	menuRegion = &systray.MenuItem{}
 
 	ValcordLockfile *os.File
@@ -406,13 +407,19 @@ func SystraySetup() {
 	menuStatus.SetTooltip("Application is not active")
 	menuStatus.Disable()
 
-	menuUpdate = systray.AddMenuItemCheckbox("Checking for updates..", "", false)
+	menuRegion = systray.AddMenuItemCheckbox("Region: Checking..", "", false)
+	menuRegion.SetTooltip("Application is checking for your region..")
+	menuRegion.Disable()
+
+	systray.AddSeparator()
+
+	menuUpdate = systray.AddMenuItemCheckbox("Update: Checking..", "", false)
 	menuUpdate.SetTooltip("Application is checking for update..")
 	menuUpdate.Disable()
 
-	menuRegion = systray.AddMenuItemCheckbox("Checking Region..", "", false)
-	menuRegion.SetTooltip("Application is checking for your region..")
-	menuRegion.Disable()
+	menuBranch = systray.AddMenuItemCheckbox("Branch: Checking..", "", false)
+	menuBranch.SetTooltip("Application is checking for build type..")
+	menuBranch.Disable()
 
 	systray.AddSeparator()
 

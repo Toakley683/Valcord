@@ -108,7 +108,8 @@ func checkUpdates() {
 
 		// Test versions have no version
 
-		menuUpdate.SetTitle("Up to date (Testing)")
+		menuUpdate.SetTitle("Update: Most Recent")
+		menuBranch.SetTitle("Branch: Test")
 
 		Types.NewLog("SHA: " + versionSHA)
 		Types.NewLog("Updates will not be checked due to test mode")
@@ -141,7 +142,8 @@ func checkUpdates() {
 		Types.NewLog("VersionSHA: " + versionSHA)
 		Types.NewLog("Successful, current version is most up to date")
 
-		menuUpdate.SetTitle("Up to date (Release)")
+		menuUpdate.SetTitle("Update: Most Recent")
+		menuBranch.SetTitle("Branch: Release")
 
 		time.Sleep(time.Second * 2)
 
