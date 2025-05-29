@@ -109,11 +109,9 @@ func CheckIfRequestOutbound(uuid string, lockfile Lockfile_type) bool {
 
 		defer wg.Done()
 
-		for Index, Value := range requests_array {
+		for _, Value := range requests_array {
 
 			FinalVal := Value.(map[string]interface{})
-
-			fmt.Println("Index:", Index, "Request username:", FinalVal["game_name"].(string)+":"+FinalVal["game_tag"].(string))
 
 			if FinalVal["puuid"] != uuid {
 				continue
